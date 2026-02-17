@@ -24,8 +24,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 // Configuration (Set these as environment variables in production!)
 // ==============================================
 $SUPABASE_URL = 'https://kutmygkodxtfbtdtwqef.supabase.co';
-$SUPABASE_SERVICE_KEY = getenv('SUPABASE_SERVICE_KEY') ?: 'your-supabase-service-key-here';
-$HF_TOKEN = getenv('HF_TOKEN') ?: 'your-huggingface-token-here';
+$SUPABASE_SERVICE_KEY = getenv('SUPABASE_SERVICE_KEY') ?: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt1dG15Z2tvZHh0ZmJ0ZHR3cWVmIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MTI5NjgzNCwiZXhwIjoyMDg2ODcyODM0fQ.g1sjjOl0YPqen9mbW9Fq2aM0sHQMQmxywZJP_-g9PPo';
+$HF_TOKEN = getenv('HF_TOKEN') ?: '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';
 $TOKENS_PER_LETTER = 4; // 1 token per 4 characters
 $AFFILIATE_COMMISSION = 0.1; // 10%
 
