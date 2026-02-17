@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Storeomall AI | Web3</title>
+    <title>Dev Storeomall AI | Web3</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.7.0/ethers.umd.min.js"></script>
@@ -23,7 +23,12 @@
 
     <div id="dashboard-screen" class="hidden w-full max-w-6xl p-4 h-screen flex flex-col">
         <div class="flex flex-col md:flex-row justify-between items-center mb-4 bg-white/5 p-4 rounded-2xl border border-white/10 gap-4">
-            <div class="text-xl font-black italic">DS // <span class="text-blue-500">ENGINE</span></div>
+            <div class="flex items-center gap-4">
+                <div class="text-xl font-black italic">DS // <span class="text-blue-500">ENGINE</span></div>
+                <div id="wallet-status" class="text-[10px] bg-blue-500/10 border border-blue-500/30 text-blue-400 px-2 py-1 rounded-md font-mono">
+                    Wallet: Not Connected
+                </div>
+            </div>
             
             <div class="flex items-center gap-2 bg-black/30 p-2 rounded-xl border border-yellow-500/30">
                 <select id="crypto-network" class="bg-black text-xs p-2 rounded outline-none border border-white/10">
