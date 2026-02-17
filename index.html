@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dev Storeomall AI</title>
+    <title>Dev Storeomall AI | V11</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
@@ -23,6 +23,12 @@
     <div id="dashboard-screen" class="hidden w-full max-w-6xl p-4 h-screen flex flex-col">
         <div class="flex justify-between items-center mb-4 bg-white/5 p-4 rounded-2xl border border-white/10">
             <div class="text-xl font-black italic">DS // <span class="text-blue-500">ENGINE</span></div>
+            
+            <div class="hidden md:flex bg-white/5 px-4 py-2 rounded-xl border border-white/10 text-xs items-center gap-2">
+                <span class="text-gray-400">Your Link:</span>
+                <span id="aff-link-display" class="text-blue-400 font-mono select-all cursor-pointer">Loading...</span>
+            </div>
+
             <div class="flex gap-4 items-center">
                 <div class="bg-black/50 px-4 py-2 rounded-lg border border-green-500/30">
                     <span class="text-green-400 font-mono font-bold" id="balance">0.00</span>
@@ -32,14 +38,13 @@
         </div>
         
         <div class="flex-1 rounded-3xl overflow-hidden border border-white/10 shadow-2xl bg-black">
-            <iframe 
-                src="https://ahmad123456mm-top.hf.space?__theme=dark" 
-                frameborder="0" 
-                class="w-full h-full">
-            </iframe>
+            <iframe id="ai-frame" src="https://ahmad123456mm-top.hf.space?__theme=dark" frameborder="0" class="w-full h-full"></iframe>
         </div>
     </div>
 
+    <script src="main.js"></script>
+</body>
+</html>
     <script src="main.js"></script>
 </body>
 </html>
