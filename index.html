@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dev Storeomall AI</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body class="bg-[#0f172a] text-white font-sans flex items-center justify-center min-h-screen">
+
+    <div id="auth-screen" class="bg-[#1e293b] p-8 rounded-2xl shadow-2xl w-96 border border-gray-700">
+        <h2 class="text-3xl font-bold mb-6 text-blue-400">DS // Access</h2>
+        <input id="email" type="email" placeholder="Email" class="w-full mb-4 p-3 bg-gray-900 rounded border border-gray-700 outline-none focus:border-blue-500">
+        <input id="password" type="password" placeholder="Password" class="w-full mb-6 p-3 bg-gray-900 rounded border border-gray-700 outline-none focus:border-blue-500">
+        <button onclick="signUp()" class="w-full bg-blue-600 hover:bg-blue-700 p-3 rounded font-bold mb-2 transition">Sign Up</button>
+        <button onclick="signIn()" class="w-full bg-gray-700 hover:bg-gray-600 p-3 rounded font-bold transition">Login</button>
+        <p id="auth-msg" class="text-red-400 text-sm mt-4 text-center"></p>
+    </div>
+
+    <div id="dashboard-screen" class="hidden w-full max-w-6xl p-6">
+        <div class="flex justify-between items-center mb-6 bg-[#1e293b] p-4 rounded-xl border border-gray-700">
+            <h1 class="text-2xl font-bold">Dev Storeomall <span class="text-blue-500">Engine</span></h1>
+            <div class="flex gap-4 items-center">
+                <span class="bg-gray-900 px-4 py-2 rounded text-green-400 font-mono">Balance: $<span id="balance">0.00</span></span>
+                <button onclick="deductCredit()" class="bg-yellow-600 hover:bg-yellow-700 px-4 py-2 rounded text-sm font-bold">Test Deduct ($0.05)</button>
+                <button onclick="signOut()" class="bg-red-600 hover:bg-red-700 px-4 py-2 rounded text-sm font-bold">Log Out</button>
+            </div>
+        </div>
+        
+        <div class="w-full h-[700px] bg-black rounded-xl border border-gray-700 overflow-hidden">
+            <iframe id="hf-engine" src="https://huggingface.co/spaces/YOUR_USERNAME/YOUR_SPACE_NAME" class="w-full h-full border-none"></iframe>
+        </div>
+    </div>
+
+    <script src="main.js"></script>
+</body>
+</html>
