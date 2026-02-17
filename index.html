@@ -1,230 +1,63 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dev Storeomall V11 · AI Platform</title>
-    <!-- Tailwind (lightweight) + custom glass/mesh styles -->
+    <title>Dev Storeomall V11 | AI Platform</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Ethers for crypto payments -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.7.0/ethers.umd.min.js"></script>
-    <!-- Supabase JS (anon key only) -->
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.7.0/index.umd.min.js"></script>
     <style>
-        /* Mesh gradient background & glass enhancements */
-        body {
-            background: radial-gradient(at 40% 20%, hsla(240, 100%, 70%, 0.15) 0px, transparent 50%),
-                        radial-gradient(at 80% 70%, hsla(300, 100%, 60%, 0.1) 0px, transparent 50%),
-                        #020617;
-            font-family: 'Inter', system-ui, -apple-system, sans-serif;
-        }
-        .glass {
-            background: rgba(15, 23, 42, 0.6);
-            backdrop-filter: blur(12px);
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            border-radius: 2rem;
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
-        }
-        .glass-card {
-            background: rgba(30, 41, 59, 0.4);
-            backdrop-filter: blur(8px);
-            border: 1px solid rgba(255, 255, 255, 0.03);
-            transition: all 0.2s ease;
-        }
-        .glass-card:hover {
-            background: rgba(30, 41, 59, 0.7);
-            border-color: rgba(59, 130, 246, 0.3);
-            transform: translateY(-4px);
-        }
-        .mesh-bg {
-            background-image: 
-                radial-gradient(circle at 30% 40%, rgba(100, 100, 255, 0.15) 0%, transparent 30%),
-                radial-gradient(circle at 80% 70%, rgba(255, 100, 200, 0.1) 0%, transparent 35%),
-                radial-gradient(circle at 20% 80%, rgba(255, 200, 100, 0.1) 0%, transparent 40%);
-        }
-        /* smooth scroll & hide dashboard initially */
-        html { scroll-behavior: smooth; }
-        #dashboard { display: none; }
-        #dashboard.active { display: flex; }
-        .hidden-section { display: none; }
+        body { background: radial-gradient(circle at top, #1a1a2e, #16213e, #0f3460); color: white; min-height: 100vh; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        .glass { background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.1); }
+        .gradient-text { background: linear-gradient(90deg, #4facfe 0%, #00f2fe 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
     </style>
 </head>
-<body class="text-white antialiased mesh-bg min-h-screen">
+<body>
 
-    <!-- LANDING PAGE (visible until login) -->
-    <div id="landing" class="relative z-10">
-        <!-- Hero -->
-        <section class="relative flex flex-col items-center justify-center min-h-screen px-6 text-center">
-            <div class="absolute inset-0 overflow-hidden">
-                <div class="absolute -top-40 -right-40 w-96 h-96 bg-blue-600/20 rounded-full blur-3xl"></div>
-                <div class="absolute -bottom-40 -left-40 w-96 h-96 bg-purple-600/20 rounded-full blur-3xl"></div>
-            </div>
-            <div class="glass p-12 max-w-5xl mx-auto relative">
-                <h1 class="text-7xl md:text-8xl font-black tracking-tighter bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
-                    DE STOREOMALL<br><span class="text-5xl md:text-6xl">V11 · AI CORE</span>
-                </h1>
-                <p class="mt-6 text-xl text-gray-300 max-w-2xl mx-auto">
-                    The first cinematic AI engine with on‑chain rewards & affiliate plasma.
-                </p>
-                <div class="mt-10 flex flex-wrap gap-4 justify-center">
-                    <button id="showAuthBtn" class="px-8 py-4 bg-blue-600 hover:bg-blue-500 rounded-full font-bold text-lg transition shadow-lg shadow-blue-600/30">
-                        ENTER DASHBOARD
-                    </button>
-                    <a href="#features" class="px-8 py-4 glass-card rounded-full font-bold text-lg hover:bg-white/10 transition">
-                        EXPLORE
-                    </a>
-                </div>
-            </div>
-            <div class="absolute bottom-8 left-1/2 -translate-x-1/2 animate-bounce">
-                <svg class="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7-7-7m14-6l-7 7-7-7"></path></svg>
-            </div>
-        </section>
+    <div id="landing" class="container mx-auto px-6 py-20 text-center">
+        <h1 class="text-6xl font-extrabold mb-6 gradient-text">Dev Storeomall V11</h1>
+        <p class="text-xl text-gray-400 mb-10">منصة الذكاء الاصطناعي المتطورة بمعدل ذكاء رقمي فائق.</p>
+        <button id="showAuthBtn" class="bg-blue-600 hover:bg-blue-700 px-8 py-4 rounded-full font-bold transition-all transform hover:scale-105">ابدأ الآن مجاناً</button>
+    </div>
 
-        <!-- AI Features -->
-        <section id="features" class="max-w-7xl mx-auto px-6 py-32">
-            <h2 class="text-5xl font-black text-center mb-4">Cognitive <span class="text-blue-400">Features</span></h2>
-            <p class="text-gray-400 text-center mb-16 max-w-2xl mx-auto">Engineered for speed, privacy & token‑efficient inference.</p>
-            <div class="grid md:grid-cols-3 gap-8">
-                <div class="glass-card p-8 rounded-3xl">
-                    <div class="w-14 h-14 bg-blue-600/20 rounded-2xl flex items-center justify-center mb-6">🧠</div>
-                    <h3 class="text-2xl font-bold mb-3">Neural Streaming</h3>
-                    <p class="text-gray-400">Real‑time token deduction based on character flow. 1 token ≈ 4 chars.</p>
+    <div id="dashboard" class="hidden container mx-auto px-4 py-8">
+        <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+            <aside class="lg:col-span-1 space-y-6">
+                <div class="glass p-6 rounded-3xl text-center">
+                    <p class="text-gray-400 text-sm mb-2">رصيدك الحالي</p>
+                    <h2 class="text-3xl font-bold"><span id="balance">0.00</span> <span class="text-sm text-blue-400 font-normal">Token</span></h2>
                 </div>
-                <div class="glass-card p-8 rounded-3xl">
-                    <div class="w-14 h-14 bg-purple-600/20 rounded-2xl flex items-center justify-center mb-6">🔗</div>
-                    <h3 class="text-2xl font-bold mb-3">On‑chain Rewards</h3>
-                    <p class="text-gray-400">Claim YouTube/Instagram rewards directly to your wallet.</p>
+                <div class="glass p-6 rounded-3xl">
+                    <h3 class="font-bold mb-4">نظام الأفلييت</h3>
+                    <p class="text-xs text-gray-400 mb-2">رابط الإحالة الخاص بك:</p>
+                    <div id="refLink" class="bg-black/30 p-2 rounded text-[10px] break-all mb-4 text-blue-300">سجل الدخول لرؤية الرابط</div>
                 </div>
-                <div class="glass-card p-8 rounded-3xl">
-                    <div class="w-14 h-14 bg-pink-600/20 rounded-2xl flex items-center justify-center mb-6">🤝</div>
-                    <h3 class="text-2xl font-bold mb-3">Affiliate Plasma</h3>
-                    <p class="text-gray-400">10% lifetime commission on referrals, paid in tokens.</p>
-                </div>
-            </div>
-        </section>
+                <button id="logoutBtn" class="w-full py-3 text-red-400 hover:text-red-300 transition">تسجيل الخروج</button>
+            </aside>
 
-        <!-- Services -->
-        <section class="max-w-7xl mx-auto px-6 py-32 border-t border-white/5">
-            <h2 class="text-5xl font-black text-center mb-4">AI <span class="text-blue-400">Services</span></h2>
-            <div class="grid md:grid-cols-2 gap-8 mt-16">
-                <div class="glass p-8">
-                    <h3 class="text-3xl font-bold mb-4">Chat Completions</h3>
-                    <p class="text-gray-400 mb-6">Access to Mixtral, Llama 3, and custom fine‑tuned models via secure proxy.</p>
-                    <div class="flex gap-2 text-sm text-gray-500">⚡ 0.25 token/sec · ⚙️ streaming</div>
+            <main class="lg:col-span-3 glass rounded-3xl p-6 flex flex-col h-[70vh]">
+                <div id="chatMessages" class="flex-grow overflow-y-auto space-y-4 mb-4 p-2 custom-scrollbar">
+                    </div>
+                <div class="relative">
+                    <input id="chatInput" type="text" placeholder="اسألني أي شيء..." class="w-full bg-white/10 border border-white/10 rounded-2xl px-6 py-4 focus:outline-none focus:border-blue-500 transition shadow-2xl">
+                    <button id="sendChatBtn" class="absolute left-2 top-2 bg-blue-600 p-2 rounded-xl px-6 h-10 hover:bg-blue-700 transition">إرسال</button>
                 </div>
-                <div class="glass p-8">
-                    <h3 class="text-3xl font-bold mb-4">Image Generation</h3>
-                    <p class="text-gray-400 mb-6">Stable Diffusion 3, FLUX. Pay per generation, no subscriptions.</p>
-                    <div class="flex gap-2 text-sm text-gray-500">🎨 20 tokens/image · 🖼️ 4K upscale</div>
-                </div>
-            </div>
-        </section>
-
-        <!-- Roadmap -->
-        <section class="max-w-7xl mx-auto px-6 py-32 border-t border-white/5">
-            <h2 class="text-5xl font-black text-center mb-4">Roadmap <span class="text-blue-400">2025</span></h2>
-            <div class="flex flex-col md:flex-row justify-between gap-6 mt-16">
-                <div class="glass-card p-6 flex-1">Q2 · Mobile SDK & on‑device inference</div>
-                <div class="glass-card p-6 flex-1 border-blue-500/30">Q3 · Decentralised compute network</div>
-                <div class="glass-card p-6 flex-1">Q4 · AI agent marketplace</div>
-            </div>
-        </section>
-
-        <!-- Technical Specs -->
-        <section class="max-w-7xl mx-auto px-6 py-32 border-t border-white/5">
-            <h2 class="text-5xl font-black text-center mb-4">Technical <span class="text-blue-400">Specs</span></h2>
-            <div class="glass p-8 font-mono text-sm">
-                <pre class="text-gray-300 overflow-x-auto">
-MODEL_THROUGHPUT: 150 tok/s  |  MAX_CONTEXT: 128k  |  ENCRYPTION: AES-256-GCM
-BLOCKCHAIN: Polygon, BSC     |  TOKEN_RATIO: 1/4 char  |  LATENCY: <400ms
-                </pre>
-            </div>
-        </section>
-
-        <!-- Pricing -->
-        <section class="max-w-7xl mx-auto px-6 py-32 border-t border-white/5">
-            <h2 class="text-5xl font-black text-center mb-4">Flexible <span class="text-blue-400">Pricing</span></h2>
-            <div class="grid md:grid-cols-3 gap-8 mt-16">
-                <div class="glass p-8 text-center">
-                    <div class="text-3xl font-bold">$10</div>
-                    <div class="text-gray-400 mt-2">1,000 tokens</div>
-                    <button class="mt-6 px-6 py-3 bg-blue-600/50 rounded-xl w-full">Buy with Crypto</button>
-                </div>
-                <div class="glass p-8 text-center border-blue-500/30">
-                    <div class="text-3xl font-bold">$50</div>
-                    <div class="text-gray-400 mt-2">6,000 tokens (+20% bonus)</div>
-                    <button class="mt-6 px-6 py-3 bg-blue-600 rounded-xl w-full">Popular</button>
-                </div>
-                <div class="glass p-8 text-center">
-                    <div class="text-3xl font-bold">$100</div>
-                    <div class="text-gray-400 mt-2">13,000 tokens (+30% bonus)</div>
-                    <button class="mt-6 px-6 py-3 bg-blue-600/50 rounded-xl w-full">Buy with Crypto</button>
-                </div>
-            </div>
-        </section>
-
-        <!-- Footer / Auth trigger -->
-        <div class="text-center py-12 text-gray-500 border-t border-white/5">
-            <button id="showAuthBtn2" class="text-blue-400 hover:underline">Existing user? Sign in</button>
+            </main>
         </div>
     </div>
 
-    <!-- DASHBOARD (hidden initially) -->
-    <div id="dashboard" class="fixed inset-0 z-50 flex flex-col p-4 bg-[#020617] overflow-hidden">
-        <!-- Top bar -->
-        <div class="glass flex justify-between items-center p-4 rounded-2xl mb-4">
-            <div class="text-2xl font-black">DS<span class="text-blue-500">//ENGINE</span></div>
-            <div class="flex gap-4 items-center">
-                <div class="bg-black/50 px-4 py-2 rounded-lg border border-green-500/30">
-                    <span id="balance" class="text-green-400 font-mono font-bold">0.00</span> <span class="text-sm text-gray-400">tokens</span>
-                </div>
-                <button id="logoutBtn" class="text-red-400 hover:text-red-500 px-3 py-1 rounded-lg transition">Exit</button>
+    <div id="authModal" class="hidden fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+        <div class="glass w-full max-w-md p-8 rounded-3xl relative">
+            <button id="closeAuthModal" class="absolute top-4 right-4 text-gray-500 hover:text-white">✕</button>
+            <h2 class="text-2xl font-bold mb-6 text-center">مرحباً بك مجدداً</h2>
+            <div id="authMsg" class="text-sm mb-4 text-center"></div>
+            <input id="email" type="email" placeholder="البريد الإلكتروني" class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 mb-4 focus:outline-none">
+            <input id="password" type="password" placeholder="كلمة المرور" class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 mb-6 focus:outline-none">
+            <div class="grid grid-cols-2 gap-4">
+                <button id="signInBtn" class="bg-blue-600 py-3 rounded-xl font-bold">دخول</button>
+                <button id="signUpBtn" class="bg-white/10 py-3 rounded-xl font-bold border border-white/10">تسجيل جديد</button>
             </div>
-        </div>
-        <!-- Main area: chat + panels -->
-        <div class="flex-1 flex gap-4 min-h-0">
-            <!-- Chat panel -->
-            <div class="flex-1 glass p-4 flex flex-col">
-                <div id="chatMessages" class="flex-1 overflow-y-auto space-y-4 pr-2">
-                    <div class="text-gray-400 text-center">Start a conversation...</div>
-                </div>
-                <div class="flex gap-2 mt-4">
-                    <input id="chatInput" type="text" placeholder="Type your message..." class="flex-1 p-4 bg-black/40 rounded-xl border border-white/10 outline-none focus:border-blue-500">
-                    <button id="sendChatBtn" class="px-6 bg-blue-600 hover:bg-blue-500 rounded-xl font-bold">Send</button>
-                </div>
-            </div>
-            <!-- Right panel: wallet, rewards, affiliate -->
-            <div class="w-80 glass p-4 overflow-y-auto space-y-6">
-                <div>
-                    <h3 class="font-bold mb-2">Crypto Wallet</h3>
-                    <button id="connectWalletBtn" class="w-full py-2 bg-purple-600/50 rounded-xl">Connect Polygon / BSC</button>
-                    <div id="walletInfo" class="text-xs text-gray-400 mt-2"></div>
-                </div>
-                <div>
-                    <h3 class="font-bold mb-2">Social Rewards</h3>
-                    <button id="claimYtBtn" class="w-full py-2 mb-2 bg-red-600/50 rounded-xl">Claim YouTube</button>
-                    <button id="claimIgBtn" class="w-full py-2 bg-pink-600/50 rounded-xl">Claim Instagram</button>
-                </div>
-                <div>
-                    <h3 class="font-bold mb-2">Affiliate</h3>
-                    <div id="refLink" class="text-xs bg-black/30 p-2 rounded break-all">loading...</div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- AUTH MODAL (simple overlay) -->
-    <div id="authModal" class="fixed inset-0 bg-black/90 backdrop-blur-sm z-50 hidden items-center justify-center">
-        <div class="glass p-8 w-96">
-            <h2 class="text-3xl font-black mb-6 text-blue-500 italic">DS // ACCESS</h2>
-            <div class="space-y-4">
-                <input id="email" type="email" placeholder="Email" class="w-full p-4 bg-black/40 rounded-xl border border-white/10">
-                <input id="password" type="password" placeholder="Password" class="w-full p-4 bg-black/40 rounded-xl border border-white/10">
-                <button id="signUpBtn" class="w-full bg-blue-600 p-4 rounded-xl font-bold">Create Account</button>
-                <button id="signInBtn" class="w-full bg-slate-700 p-4 rounded-xl font-bold">Login</button>
-            </div>
-            <p id="authMsg" class="text-red-400 text-xs mt-4"></p>
-            <button id="closeAuthModal" class="absolute top-4 right-4 text-2xl">&times;</button>
         </div>
     </div>
 
