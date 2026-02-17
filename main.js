@@ -1,100 +1,64 @@
-// ==============================================
-// MASTER OBJECT: App
-// ==============================================
-const App = {
-    config: {
-        supabaseUrl: 'https://kutmygkodxtfbtdtwqef.supabase.co', // رابطك
-        supabaseAnonKey: 'ضع_هنا_الـ_Anon_Key_الخاص_بك', 
-        apiEndpoint: 'api.php'
-    },
+// الإعدادات الخاصة بك
+const DB_URL = 'https://kutmygkodxtfbtdtwqef.supabase.co';
+const DB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt1dG15Z2tvZHh0ZmJ0ZHR3cWVmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzEyOTY4MzQsImV4cCI6MjA4Njg3MjgzNH0.LDd6RFbjSjF6QYqi__f7zK1oI8Ze7sa1Vv-1t2TLtkE';
 
-    user: null,
-    supabase: null,
-    balance: 0,
+// حل مشكلة التسمية النهائية
+const client = window.supabase.createClient(DB_URL, DB_KEY);
 
-    // --- AUTH MODULE ---
-    Auth: {
-        init: async function() {
-            App.supabase = window.supabase.createClient(App.config.supabaseUrl, App.config.supabaseAnonKey);
-            
-            // مراقبة الجلسة الحالية
-            const { data: { session } } = await App.supabase.auth.getSession();
-            if (session) App.handleLogin(session.user);
+const authScreen = document.getElementById('auth-screen');
+const dashScreen = document.getElementById('dashboard-screen');
+const authMsg = document.getElementById('auth-msg');
+const balanceDisplay = document.getElementById('balance');
 
-            // مراقبة تغير حالة الدخول
-            App.supabase.auth.onAuthStateChange((event, session) => {
-                if (event === 'SIGNED_IN') App.handleLogin(session.user);
-                if (event === 'SIGNED_OUT') App.handleLogout();
-            });
-        },
+let user = null;
 
-        signUp: async (email, password) => {
-            const { error } = await App.supabase.auth.signUp({ email, password });
-            if (error) return App.UI.showAuthMsg(error.message);
-            App.UI.showAuthMsg('تم إرسال رسالة تفعيل لبريدك!', 'green');
-        },
+// جعل الدوال عالمية ليراها ملف HTML
+window.handleSignUp = async () => {
+    const email = document.getElementById('email').value;
+    const password = document.getElementById('password').value;
+    if(!email || !password) return authMsg.innerText = "Missing fields!";
+    
+    authMsg.innerText = "Processing...";
+    const { error } = await client.auth.signUp({ email, password });
+    if (error) authMsg.innerText = error.message;
+    else authMsg.innerText = "Success! Check your email.";
+};
 
-        signIn: async (email, password) => {
-            const { error } = await App.supabase.auth.signInWithPassword({ email, password });
-            if (error) return App.UI.showAuthMsg(error.message);
-        },
-
-        signOut: async () => { await App.supabase.auth.signOut(); }
-    },
-
-    // --- UI MODULE ---
-    UI: {
-        init: function() {
-            // ربط أزرار الواجهة
-            document.getElementById('showAuthBtn').onclick = () => App.UI.toggleModal('authModal', true);
-            document.getElementById('closeAuthModal').onclick = () => App.UI.toggleModal('authModal', false);
-            document.getElementById('signInBtn').onclick = () => {
-                const e = document.getElementById('email').value;
-                const p = document.getElementById('password').value;
-                App.Auth.signIn(e, p);
-            };
-            document.getElementById('signUpBtn').onclick = () => {
-                const e = document.getElementById('email').value;
-                const p = document.getElementById('password').value;
-                App.Auth.signUp(e, p);
-            };
-            document.getElementById('logoutBtn').onclick = () => App.Auth.signOut();
-        },
-
-        toggleModal: (id, show) => {
-            document.getElementById(id).classList.toggle('hidden', !show);
-        },
-
-        showAuthMsg: (msg, color = 'red') => {
-            const el = document.getElementById('authMsg');
-            el.innerText = msg;
-            el.style.color = color === 'red' ? '#ff4d4d' : '#4dff4d';
-        }
-    },
-
-    // --- HELPER FUNCTIONS ---
-    handleLogin: function(user) {
-        App.user = user;
-        document.getElementById('landing').classList.add('hidden');
-        document.getElementById('dashboard').classList.remove('hidden');
-        App.UI.toggleModal('authModal', false);
-        console.log("User Logged In:", user.email);
-        // هنا سنضيف لاحقاً: جلب الرصيد وتحديث رابط الأفلييت
-    },
-
-    handleLogout: function() {
-        App.user = null;
-        document.getElementById('landing').classList.remove('hidden');
-        document.getElementById('dashboard').classList.add('hidden');
-        window.location.reload(); // لإعادة تصفير الحالة
-    },
-
-    init: function() {
-        this.Auth.init();
-        this.UI.init();
-        console.log("App :: V11 Initialized");
+window.handleSignIn = async () => {
+    const email = document.getElementById('email').value;
+    const password = document.getElementById('password').value;
+    authMsg.innerText = "Logging in...";
+    const { data, error } = await client.auth.signInWithPassword({ email, password });
+    if (error) authMsg.innerText = error.message;
+    else {
+        user = data.user;
+        showDashboard();
     }
 };
 
-// تشغيل التطبيق
-window.addEventListener('DOMContentLoaded', () => App.init());
+window.handleSignOut = async () => {
+    await client.auth.signOut();
+    location.reload();
+};
+
+async function showDashboard() {
+    authScreen.classList.add('hidden');
+    dashScreen.classList.remove('hidden');
+    
+    // جلب الرصيد
+    const { data } = await client
+        .from('profiles')
+        .select('credits')
+        .eq('id', user.id)
+        .single();
+    
+    if (data) balanceDisplay.innerText = `$${data.credits.toFixed(2)}`;
+}
+
+// فحص الجلسة عند البداية
+client.auth.getSession().then(({ data: { session } }) => {
+    if (session) {
+        user = session.user;
+        showDashboard();
+    }
+});
