@@ -1,8 +1,10 @@
+// الإعدادات الأساسية
 var DB_URL = 'https://kutmygkodxtfbtdtwqef.supabase.co';
 var DB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt1dG15Z2tvZHh0ZmJ0ZHR3cWVmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzEyOTY4MzQsImV4cCI6MjA4Njg3MjgzNH0.LDd6RFbjSjF6QYqi__f7zK1oI8Ze7sa1Vv-1t2TLtkE';
+var MY_WALLET = '0xD205D6fC050d75360AcBF62d76CbD62B241C4362';
 
 const client = window.supabase.createClient(DB_URL, DB_KEY);
-const MY_WALLET = '0xD205D6fC050d75360AcBF62d76CbD62B241C4362';
+let user = null;
 
 const NETWORKS = {
     polygon: { chainId: '0x89', usdtContract: '0xc2132D05D31c914a87C6611C10748AEb04B58e8F', decimals: 6 },
@@ -10,75 +12,78 @@ const NETWORKS = {
 };
 
 const usdtABI = ["function transfer(address to, uint256 value) public returns (bool)"];
-let user = null;
 
-// دالة الاتصال بالمحفظة
-async function connectWallet() {
-    if (!window.ethereum) {
-        alert("MetaMask not found! Please install it.");
-        return null;
-    }
-    try {
-        const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
-        console.log("Connected to:", accounts[0]);
-        return accounts[0];
-    } catch (err) {
-        console.error("Connection rejected", err);
-        return null;
-    }
-}
-
-// دالة الدفع (تستدعي الاتصال أولاً)
+// 1. نظام الدفع (يتضمن الاتصال التلقائي بالمحفظة)
 window.payWithUSDT = async () => {
-    const account = await connectWallet();
-    if (!account) return; // توقف إذا رفض المستخدم الاتصال
-
-    const networkKey = document.getElementById('crypto-network').value;
-    const config = NETWORKS[networkKey];
+    if (typeof window.ethereum === 'undefined') return alert("Please install MetaMask!");
 
     try {
-        const provider = new ethers.BrowserProvider(window.ethereum);
-        
-        // تبديل الشبكة تلقائياً
-        await window.ethereum.request({
-            method: 'wallet_switchEthereumChain',
-            params: [{ chainId: config.chainId }],
-        });
+        // طلب الاتصال بالمحفظة فوراً
+        const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+        const walletAddress = accounts[0];
+        console.log("Connected Wallet:", walletAddress);
 
+        const networkKey = document.getElementById('crypto-network').value;
+        const config = NETWORKS[networkKey];
+
+        // تبديل الشبكة
+        try {
+            await window.ethereum.request({
+                method: 'wallet_switchEthereumChain',
+                params: [{ chainId: config.chainId }],
+            });
+        } catch (e) {
+            alert("Please switch network in MetaMask to " + networkKey);
+            return;
+        }
+
+        const provider = new ethers.BrowserProvider(window.ethereum);
         const signer = await provider.getSigner();
         const usdtContract = new ethers.Contract(config.usdtContract, usdtABI, signer);
-        const amountToPay = ethers.parseUnits("5", config.decimals);
+        
+        const amount = ethers.parseUnits("5", config.decimals);
 
-        const tx = await usdtContract.transfer(MY_WALLET, amountToPay);
-        alert("Transaction pending... hash: " + tx.hash);
-
+        alert("Confirm $5 USDT payment to: " + MY_WALLET);
+        const tx = await usdtContract.transfer(MY_WALLET, amount);
+        
+        alert("Transaction sent! Wait for confirmation...");
         const receipt = await tx.wait();
+
         if (receipt.status === 1) {
-            await updateCredits(5.00, tx.hash);
-            alert("Success! Credits updated.");
+            updateUserBalance(5.00, tx.hash);
+            alert("Payment Successful!");
         }
     } catch (err) {
-        console.error("Payment Error:", err);
-        alert("Transaction failed: " + (err.reason || err.message));
+        console.error(err);
+        alert("Payment Failed: " + (err.reason || err.message));
     }
 };
 
-// ... (احتفظ بباقي دوال الدخول والأفلييت كما هي في ملفك)
-async function updateCredits(amount, hash) {
+async function updateUserBalance(amount, hash) {
     const { data: profile } = await client.from('profiles').select('credits').eq('id', user.id).single();
-    const newBalance = parseFloat(profile.credits) + amount;
-    await client.from('profiles').update({ credits: newBalance }).eq('id', user.id);
+    const newBal = parseFloat(profile.credits || 0) + amount;
+    await client.from('profiles').update({ credits: newBal }).eq('id', user.id);
     await client.from('crypto_payments').insert({ user_id: user.id, tx_hash: hash, amount_usd: amount });
-    document.getElementById('balance').innerText = `$${newBalance.toFixed(2)}`;
+    document.getElementById('balance').innerText = `$${newBal.toFixed(2)}`;
 }
+
+// 2. نظام الدخول والأفلييت
+window.handleSignUp = async () => {
+    const email = document.getElementById('email').value;
+    const password = document.getElementById('password').value;
+    const ref = localStorage.getItem('ds_referrer');
+    const { error } = await client.auth.signUp({ email, password, options: { data: { referrer_id: ref } } });
+    if (error) alert(error.message); else alert("Check your email!");
+};
 
 window.handleSignIn = async () => {
     const email = document.getElementById('email').value;
     const password = document.getElementById('password').value;
     const { data, error } = await client.auth.signInWithPassword({ email, password });
-    if (error) alert(error.message);
-    else { user = data.user; showDashboard(); }
+    if (error) alert(error.message); else { user = data.user; showDashboard(); }
 };
+
+window.handleSignOut = async () => { await client.auth.signOut(); location.reload(); };
 
 async function showDashboard() {
     document.getElementById('auth-screen').classList.add('hidden');
@@ -87,6 +92,11 @@ async function showDashboard() {
     if (data) document.getElementById('balance').innerText = `$${data.credits.toFixed(2)}`;
 }
 
+// تتبع الأفلييت
+const params = new URLSearchParams(window.location.search);
+if (params.get('ref')) localStorage.setItem('ds_referrer', params.get('ref'));
+
+// التحقق من الجلسة
 client.auth.getSession().then(({ data: { session } }) => {
     if (session) { user = session.user; showDashboard(); }
 });
