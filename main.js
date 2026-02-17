@@ -1,8 +1,8 @@
-// ⚠️ الإعدادات (استخدمنا الأسماء التي زودتني بها)
+// الإعدادات الخاصة بك
 const DB_URL = 'https://kutmygkodxtfbtdtwqef.supabase.co';
 const DB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt1dG15Z2tvZHh0ZmJ0ZHR3cWVmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzEyOTY4MzQsImV4cCI6MjA4Njg3MjgzNH0.LDd6RFbjSjF6QYqi__f7zK1oI8Ze7sa1Vv-1t2TLtkE';
 
-// حل مشكلة التسمية: نستخدم 'client' بدلاً من 'supabase'
+// حل مشكلة التسمية النهائية
 const client = window.supabase.createClient(DB_URL, DB_KEY);
 
 const authScreen = document.getElementById('auth-screen');
@@ -12,14 +12,16 @@ const balanceDisplay = document.getElementById('balance');
 
 let user = null;
 
-// 1. تعريف الدوال وربطها بالنافذة (لضمان عمل الـ onclick)
+// جعل الدوال عالمية ليراها ملف HTML
 window.handleSignUp = async () => {
     const email = document.getElementById('email').value;
     const password = document.getElementById('password').value;
-    authMsg.innerText = "Creating account...";
+    if(!email || !password) return authMsg.innerText = "Missing fields!";
+    
+    authMsg.innerText = "Processing...";
     const { error } = await client.auth.signUp({ email, password });
     if (error) authMsg.innerText = error.message;
-    else authMsg.innerText = "Check your email!";
+    else authMsg.innerText = "Success! Check your email.";
 };
 
 window.handleSignIn = async () => {
@@ -39,12 +41,11 @@ window.handleSignOut = async () => {
     location.reload();
 };
 
-// 2. إدارة الواجهة والرصيد
 async function showDashboard() {
     authScreen.classList.add('hidden');
     dashScreen.classList.remove('hidden');
     
-    // جلب الرصيد من جدول Profiles
+    // جلب الرصيد
     const { data } = await client
         .from('profiles')
         .select('credits')
@@ -54,7 +55,7 @@ async function showDashboard() {
     if (data) balanceDisplay.innerText = `$${data.credits.toFixed(2)}`;
 }
 
-// 3. التحقق التلقائي عند التحميل
+// فحص الجلسة عند البداية
 client.auth.getSession().then(({ data: { session } }) => {
     if (session) {
         user = session.user;
