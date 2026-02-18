@@ -3,7 +3,7 @@ const DB_URL = 'https://kutmygkodxtfbtdtwqef.supabase.co';
 const DB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt1dG15Z2tvZHh0ZmJ0ZHR3cWVmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzEyOTY4MzQsImV4cCI6MjA4Njg3MjgzNH0.LDd6RFbjSjF6QYqi__f7zK1oI8Ze7sa1Vv-1t2TLtkE';
 
 // انتبه: تأكد من وضع المفتاح بين علامتي التنصيص وبدون أي مسافات زائدة
-const GROQ_API_KEY = "ضع_هنا_مفتاح_GROQ_الخاص_بك".trim(); 
+const GROQ_API_KEY = "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".trim(); 
 
 const client = window.supabase.createClient(DB_URL, DB_KEY);
 let user = null;
