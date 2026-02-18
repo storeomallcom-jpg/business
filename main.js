@@ -51,7 +51,18 @@ async function generateReadme() {
             body: JSON.stringify({
                 "model": "llama-3.3-70b-versatile",
                 "messages": [
-                    { "role": "system", "content": "Professional README generator. ONLY raw markdown." },
+                    { ""messages": [
+    { 
+        "role": "system", 
+        "content": "You are an expert Technical Writer. Generate a world-class README.md. 
+        - "Use professional emojis for each section.
+        -" Add a 'Tech Stack' section with a table.
+        - "Include a clear 'Quick Start' and 'Configuration' guide.
+        - "Use advanced Markdown (tables, task lists, and proper code blocks).
+        -" Make it look like a top-tier Open Source project."
+    },
+    { "role": "user", "content": `Analyze this code and write the README:\n${fileContent}` }
+]" },
                     { "role": "user", "content": "Code:\n" + fileContent.substring(0, 8000) }
                 ],
                 "temperature": 0.5
