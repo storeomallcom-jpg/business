@@ -3,16 +3,21 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dev Storeomall AI | Web3</title>
+    <title>DS // AI TERMINAL</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.7.0/ethers.umd.min.js"></script>
-    <!-- Font Awesome for icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        /* Custom scrollbar for terminal feel */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #0f172a; }
+        ::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #334155; }
+    </style>
 </head>
 <body class="bg-[#020617] text-white font-sans flex items-center justify-center min-h-screen">
 
-    <!-- Auth Screen -->
     <div id="auth-screen" class="bg-[#1e293b]/50 p-8 rounded-3xl shadow-2xl w-96 border border-white/10 backdrop-blur-md">
         <h2 class="text-3xl font-black mb-6 text-blue-500 tracking-tighter italic text-center">DS // ACCESS</h2>
         <div class="space-y-4">
@@ -24,9 +29,7 @@
         <p id="auth-msg" class="text-red-400 text-xs mt-4 text-center font-semibold"></p>
     </div>
 
-    <!-- Dashboard Screen (with custom chat) -->
     <div id="dashboard-screen" class="hidden w-full max-w-6xl p-4 h-screen flex flex-col">
-        <!-- Top bar (unchanged) -->
         <div class="flex flex-col md:flex-row justify-between items-center mb-4 bg-white/5 p-4 rounded-2xl border border-white/10 gap-4">
             <div class="flex items-center gap-4">
                 <div class="text-xl font-black italic">DS // <span class="text-blue-500">ENGINE</span></div>
@@ -53,42 +56,47 @@
             </div>
         </div>
 
-        <!-- New Custom Chat Interface (replaces iframe) -->
-        <div class="flex-1 rounded-3xl overflow-hidden border border-white/10 shadow-2xl bg-slate-950 flex flex-col">
-            <!-- Scrollable Chat History -->
-            <div id="chat-messages" class="flex-1 overflow-y-auto p-4 space-y-4">
-                <!-- Example messages (will be populated by JS) -->
+        <div class="flex-1 rounded-3xl overflow-hidden border border-white/10 shadow-2xl bg-slate-950 flex flex-col relative">
+            
+            <div id="chat-messages" class="flex-1 overflow-y-auto p-4 space-y-4 pb-20">
                 <div class="flex justify-start">
-                    <div class="bg-slate-800 text-white rounded-2xl rounded-tl-none px-4 py-2 max-w-[80%]">
-                        <p class="text-sm">Hello! How can I help you today?</p>
+                    <div class="bg-slate-800 text-white rounded-2xl rounded-tl-none px-4 py-2 max-w-[80%] border border-white/5">
+                        <p class="text-sm font-mono">System: Engine Ready. Upload code or paste snippet ($0.50/run).</p>
                     </div>
                 </div>
             </div>
 
-            <!-- File Preview Area (hidden by default) -->
+            <div id="loading-indicator" class="hidden absolute bottom-20 left-1/2 transform -translate-x-1/2 bg-blue-600/20 backdrop-blur border border-blue-500/50 px-4 py-2 rounded-full flex items-center gap-3">
+                <div class="w-2 h-2 bg-blue-400 rounded-full animate-bounce"></div>
+                <div class="w-2 h-2 bg-blue-400 rounded-full animate-bounce delay-75"></div>
+                <div class="w-2 h-2 bg-blue-400 rounded-full animate-bounce delay-150"></div>
+                <span class="text-xs text-blue-300 font-mono">Generating Documentation...</span>
+            </div>
+
             <div id="file-preview" class="hidden flex items-center gap-2 px-4 py-2 bg-slate-900 border-t border-white/10 text-sm">
-                <i class="fas fa-paperclip text-blue-400"></i>
-                <span id="file-name" class="flex-1 truncate"></span>
-                <button onclick="clearSelectedFile()" class="text-red-400 hover:text-red-300">
+                <i class="fas fa-file-code text-blue-400"></i>
+                <span id="file-name" class="flex-1 truncate font-mono text-gray-300"></span>
+                <button id="clear-file-btn" class="text-red-400 hover:text-red-300">
                     <i class="fas fa-times"></i>
                 </button>
             </div>
 
-            <!-- Message Input Area -->
             <div class="flex items-center gap-2 p-4 border-t border-white/10 bg-slate-900">
-                <button id="file-upload-btn" class="text-gray-400 hover:text-blue-400 transition">
+                <button id="file-upload-btn" class="text-gray-400 hover:text-blue-400 transition p-2">
                     <i class="fas fa-paperclip text-xl"></i>
                 </button>
-                <input type="file" id="file-input" class="hidden" accept=".txt,.pdf,.doc,.docx,.png,.jpg,.jpeg">
-                <input type="text" id="message-input" placeholder="Type your message..." 
-                       class="flex-1 bg-slate-800 text-white rounded-full px-4 py-2 outline-none focus:ring-2 focus:ring-blue-500 border border-white/10">
-                <button id="send-message-btn" class="bg-blue-600 hover:bg-blue-700 text-white rounded-full px-4 py-2 font-bold transition">
-                    <i class="fas fa-paper-plane"></i>
+                <input type="file" id="file-input" class="hidden" accept=".txt,.py,.js,.html,.css,.md,.json">
+                
+                <input type="text" id="message-input" placeholder="Paste code or describe project..." 
+                       class="flex-1 bg-slate-800 text-white rounded-full px-4 py-3 outline-none focus:ring-2 focus:ring-blue-500 border border-white/10 font-mono text-sm">
+                
+                <button id="send-message-btn" class="bg-blue-600 hover:bg-blue-700 text-white rounded-full w-12 h-12 flex items-center justify-center font-bold transition shadow-lg shadow-blue-900/20">
+                    <i class="fas fa-arrow-up"></i>
                 </button>
             </div>
         </div>
     </div>
 
-    <script src="main.js"></script>
+    <script type="module" src="main.js"></script>
 </body>
 </html>
