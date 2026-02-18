@@ -2,7 +2,7 @@
 const DB_URL = 'https://kutmygkodxtfbtdtwqef.supabase.co';
 const DB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt1dG15Z2tvZHh0ZmJ0ZHR3cWVmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzEyOTY4MzQsImV4cCI6MjA4Njg3MjgzNH0.LDd6RFbjSjF6QYqi__f7zK1oI8Ze7sa1Vv-1t2TLtkE';
 
-// تنظيف المفتاح من أي رموز مخفية تماماً
+// تنظيف المفتاح من أي رموز مخفية لضمان عدم حدوث خطأ ISO-8859-1
 const RAW_KEY = "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";
 const GROQ_API_KEY = RAW_KEY.replace(/[^\x20-\x7E]/g, "").trim(); 
 
@@ -13,7 +13,9 @@ let selectedFile = null;
 // ========== BEAUTIFUL MARKDOWN RENDERER ==========
 function formatMarkdown(text) {
     if (!text) return "";
+    // حذف مقدمات الذكاء الاصطناعي المعتادة
     let cleanText = text.replace(/^(Certainly|Here is|Sure|I've generated).*\n/gi, "");
+    
     return cleanText
         .replace(/^# (.*$)/gm, '<h1 class="text-3xl font-black text-blue-400 my-6 tracking-tight">$1</h1>')
         .replace(/^## (.*$)/gm, '<h2 class="text-xl font-bold text-blue-300 mt-8 mb-4 border-b border-white/10 pb-2">$1</h2>')
@@ -23,7 +25,7 @@ function formatMarkdown(text) {
         .replace(/\n/g, '<br>');
 }
 
-// ========== CORE ENGINE (FIXED HEADERS) ==========
+// ========== CORE ENGINE (FIXED & CLEANED) ==========
 async function generateReadme() {
     const input = document.getElementById('message-input');
     const loading = document.getElementById('loading-indicator');
@@ -31,45 +33,44 @@ async function generateReadme() {
     
     if (!selectedFile) return alert("Please upload your code first!");
 
+    // 1. التحقق من الرصيد في Supabase
     const { data: profile, error: pErr } = await client.from('profiles').select('credits').eq('id', user.id).single();
     if (pErr || profile.credits < 0.50) return alert("Insufficient Balance ($0.50 required)");
 
     loading.classList.remove('hidden');
-    chatDisplay.innerHTML = `<div class="text-center py-20 animate-pulse font-mono text-blue-400 italic">SECURE CONNECTION IN PROGRESS...</div>`;
+    chatDisplay.innerHTML = `<div class="text-center py-20 animate-pulse font-mono text-blue-400 italic font-bold">QWEN AI IS ANALYZING YOUR CODE...</div>`;
 
     try {
         let fileContent = await selectedFile.text();
 
-        // الحل الجذري لخطأ ISO-8859-1: بناء الـ Headers ككائن نظيف
+        // 2. إعداد الرؤوس (Headers) بشكل آمن
         const requestHeaders = new Headers();
         requestHeaders.append("Authorization", "Bearer " + GROQ_API_KEY);
         requestHeaders.append("Content-Type", "application/json");
 
-    body: JSON.stringify({
-    "model": "qwen/qwen3-32b", // تأكد من كتابة الاسم الصحيح للموديل من لوحة تحكم Groq
-    "messages": [
-        { 
-            "role": "system", 
-            "content": `You are an expert Technical Writer and Senior Developer Advocate. Generate a world-class README.md. 
-            - Use professional and relevant emojis for each section.
-            - Add a 'Tech Stack' section using a clean Markdown table.
-            - Include a 'Quick Start', 'Configuration', and 'Installation' guide.
-            - Use advanced Markdown (tables, task lists, and high-quality code blocks).
-            - Ensure the tone is elite, professional, and reflects a top-tier Open Source project.` 
-        },
-        { 
-            "role": "user", 
-            "content": `Analyze the following code and generate a masterpiece README.md:\n\n${fileContent.substring(0, 10000)}` 
-        }
-    ],
-    "temperature": 0.6,
-    "max_tokens": 4096
-})
-    { "role": "user", "content": `Analyze this code and write the README:\n${fileContent}` }
-]" },
-                    { "role": "user", "content": "Code:\n" + fileContent.substring(0, 8000) }
+        // 3. الطلب الموحد لـ Groq API
+        const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+            method: "POST",
+            headers: requestHeaders,
+            body: JSON.stringify({
+                "model": "qwen/qwen3-32b", // هذا هو الموديل الأذكى المتاح لك حالياً
+                "messages": [
+                    { 
+                        "role": "system", 
+                        "content": `You are an expert Technical Writer. Generate a world-class README.md. 
+                        - Use professional emojis for each section.
+                        - Add a 'Tech Stack' section with a clean table.
+                        - Include 'Quick Start', 'Installation', and 'Architecture' sections.
+                        - Explain the code logic deeply like a Senior Engineer.
+                        - Output ONLY raw markdown.` 
+                    },
+                    { 
+                        "role": "user", 
+                        "content": `User Instructions: ${input.value}\n\nCode to analyze:\n${fileContent.substring(0, 10000)}` 
+                    }
                 ],
-                "temperature": 0.5
+                "temperature": 0.6,
+                "max_tokens": 4096
             })
         });
 
@@ -81,34 +82,47 @@ async function generateReadme() {
         const result = await response.json();
         const finalReadme = result.choices[0].message.content;
 
-        await client.from('profiles').update({ credits: profile.credits - 0.50 }).eq('id', user.id);
-        document.getElementById('balance').innerText = (profile.credits - 0.50).toFixed(2);
+        // 4. تحديث الرصيد وعرض النتيجة
+        const updatedCredits = profile.credits - 0.50;
+        await client.from('profiles').update({ credits: updatedCredits }).eq('id', user.id);
+        document.getElementById('balance').innerText = updatedCredits.toFixed(2);
 
         loading.classList.add('hidden');
         chatDisplay.innerHTML = `
-            <div class="bg-slate-800/40 p-8 rounded-3xl border border-white/10 relative group">
+            <div class="bg-slate-800/40 p-8 rounded-3xl border border-white/10 relative group shadow-2xl">
+                <div class="absolute -top-3 left-6 bg-blue-600 text-[10px] px-3 py-1 rounded-full font-mono uppercase font-bold tracking-tighter">Powered by Qwen-32B</div>
                 <div class="markdown-body">${formatMarkdown(finalReadme)}</div>
-                <button id="dl-final" class="mt-8 w-full bg-blue-600 hover:bg-blue-500 p-4 rounded-xl font-black uppercase tracking-widest transition-all">Download .md</button>
+                <button id="dl-final" class="mt-8 w-full bg-blue-600 hover:bg-blue-500 p-4 rounded-xl font-black uppercase tracking-widest transition-all shadow-lg shadow-blue-900/20">Download README.md</button>
             </div>`;
 
         document.getElementById('dl-final').onclick = () => {
             const blob = new Blob([finalReadme], { type: 'text/markdown' });
             const a = document.createElement('a');
-            a.href = URL.createObjectURL(blob); a.download = "README.md"; a.click();
+            a.href = URL.createObjectURL(blob); 
+            a.download = "README.md"; 
+            a.click();
         };
 
     } catch (err) {
-        console.error("Debug Error:", err);
+        console.error("Critical Failure:", err);
         loading.classList.add('hidden');
-        chatDisplay.innerHTML = `<p class="text-red-400 text-center py-10 font-mono italic">CONNECTION REFUSED: ${err.message}</p>`;
+        chatDisplay.innerHTML = `<div class="bg-red-900/20 border border-red-500/50 p-6 rounded-2xl text-red-400 text-center font-mono">
+            <p class="font-bold">SYSTEM ERROR</p>
+            <p class="text-sm opacity-80">${err.message}</p>
+        </div>`;
     }
 }
 
 // ========== INITIALIZATION ==========
 document.addEventListener('DOMContentLoaded', () => {
-    document.getElementById('file-upload-btn').onclick = () => document.getElementById('file-input').click();
-    document.getElementById('send-message-btn').onclick = generateReadme;
-    document.getElementById('file-input').onchange = (e) => {
+    const fileInput = document.getElementById('file-input');
+    const uploadBtn = document.getElementById('file-upload-btn');
+    const sendBtn = document.getElementById('send-message-btn');
+
+    if (uploadBtn) uploadBtn.onclick = () => fileInput.click();
+    if (sendBtn) sendBtn.onclick = generateReadme;
+    
+    fileInput.onchange = (e) => {
         if (e.target.files[0]) {
             selectedFile = e.target.files[0];
             document.getElementById('file-name').innerText = selectedFile.name;
@@ -117,8 +131,12 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 });
 
+// Auth Session Handling
 client.auth.getSession().then(({ data: { session } }) => { 
-    if (session) { user = session.user; showDashboard(); } 
+    if (session) { 
+        user = session.user; 
+        showDashboard(); 
+    } 
 });
 
 function showDashboard() {
