@@ -45,22 +45,26 @@ async function generateReadme() {
         requestHeaders.append("Authorization", "Bearer " + GROQ_API_KEY);
         requestHeaders.append("Content-Type", "application/json");
 
-        const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-            method: "POST",
-            headers: requestHeaders,
-            body: JSON.stringify({
-                "model": "llama-3.3-70b-versatile",
-                "messages": [
-                    { ""messages": [
-    { 
-        "role": "system", 
-        "content": "You are an expert Technical Writer. Generate a world-class README.md. 
-        - "Use professional emojis for each section.
-        -" Add a 'Tech Stack' section with a table.
-        - "Include a clear 'Quick Start' and 'Configuration' guide.
-        - "Use advanced Markdown (tables, task lists, and proper code blocks).
-        -" Make it look like a top-tier Open Source project."
-    },
+    body: JSON.stringify({
+    "model": "qwen/qwen3-32b", // تأكد من كتابة الاسم الصحيح للموديل من لوحة تحكم Groq
+    "messages": [
+        { 
+            "role": "system", 
+            "content": `You are an expert Technical Writer and Senior Developer Advocate. Generate a world-class README.md. 
+            - Use professional and relevant emojis for each section.
+            - Add a 'Tech Stack' section using a clean Markdown table.
+            - Include a 'Quick Start', 'Configuration', and 'Installation' guide.
+            - Use advanced Markdown (tables, task lists, and high-quality code blocks).
+            - Ensure the tone is elite, professional, and reflects a top-tier Open Source project.` 
+        },
+        { 
+            "role": "user", 
+            "content": `Analyze the following code and generate a masterpiece README.md:\n\n${fileContent.substring(0, 10000)}` 
+        }
+    ],
+    "temperature": 0.6,
+    "max_tokens": 4096
+})
     { "role": "user", "content": `Analyze this code and write the README:\n${fileContent}` }
 ]" },
                     { "role": "user", "content": "Code:\n" + fileContent.substring(0, 8000) }
