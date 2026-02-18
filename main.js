@@ -15,6 +15,9 @@ const NETWORKS = {
 
 const usdtABI = ["function transfer(address to, uint256 value) public returns (bool)"];
 
+// 1 credit = $0.50
+const CREDITS_PER_USDT = 2; // $1 = 2 credits
+
 // ========== Wallet Logic ==========
 async function updateWalletUI() {
     if (window.ethereum) {
@@ -48,11 +51,14 @@ window.payWithUSDT = async () => {
         const provider = new ethers.BrowserProvider(window.ethereum);
         const signer = await provider.getSigner();
         const usdtContract = new ethers.Contract(config.usdtContract, usdtABI, signer);
-        const amount = ethers.parseUnits("5", config.decimals);
+        const amount = ethers.parseUnits("5", config.decimals); // Pay 5 USDT
 
         const tx = await usdtContract.transfer(MY_WALLET, amount);
         const receipt = await tx.wait();
-        if (receipt.status === 1) updateUserBalance(5.00, tx.hash);
+        if (receipt.status === 1) {
+            // 5 USDT = 10 credits
+            updateUserBalance(5 * CREDITS_PER_USDT, tx.hash);
+        }
     } catch (err) { alert("Payment Failed: " + err.message); }
 };
 
@@ -130,7 +136,8 @@ async function generateReadme() {
     const { data: profile } = await client.from('profiles').select('credits').eq('id', user.id).single();
     if (!profile || profile.credits < 0.50) return alert("Insufficient Balance ($0.50 required)");
 
-    chat.innerHTML = '<div class="text-center text-blue-400 animate-pulse font-mono text-sm mt-10">ANALYZING ENGINE STARTING...</div>';
+    // Clear previous messages and show spinner only
+    chat.innerHTML = '';
     loading.classList.remove('hidden');
 
     try {
@@ -149,14 +156,17 @@ async function generateReadme() {
         if (result.choices) {
             const readme = result.choices[0].message.content;
             
-            // 💰 DEDUCT CREDITS
+            // 💰 DEDUCT CREDITS (fix: add 'id' column)
             const newBal = profile.credits - 0.50;
-            await client.from('profiles').update({ credits: newBal }).eq(user.id);
+            await client.from('profiles').update({ credits: newBal }).eq('id', user.id);
             document.getElementById('balance').innerText = newBal.toFixed(2);
 
             loading.classList.add('hidden');
             chat.innerHTML = `
                 <div class="bg-slate-800 p-6 rounded-2xl border border-white/10 shadow-2xl relative group">
+                    <div class="mb-4 text-sm text-gray-400 italic border-l-4 border-blue-500 pl-3">
+                        <strong>Instruction:</strong> ${userTask}
+                    </div>
                     <button onclick="navigator.clipboard.writeText(\`${readme.replace(/`/g, '\\`')}\`)" class="absolute top-4 right-4 bg-blue-600 text-xs px-3 py-1 rounded">Copy</button>
                     <div class="prose prose-invert max-w-none">${formatMarkdown(readme)}</div>
                     <button id="dl-btn" class="mt-6 w-full bg-green-600 p-3 rounded-xl font-bold">⬇️ Download README.md</button>
@@ -169,7 +179,10 @@ async function generateReadme() {
                 a.href = url; a.download = "README.md"; a.click();
             };
         }
-    } catch (e) { alert("Engine Error"); loading.classList.add('hidden'); }
+    } catch (e) { 
+        alert("Engine Error: " + e.message);
+        loading.classList.add('hidden');
+    }
 }
 
 client.auth.getSession().then(({ data: { session } }) => { if (session) { user = session.user; showDashboard(); } });
