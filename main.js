@@ -5,7 +5,6 @@ const DB_URL = 'https://kutmygkodxtfbtdtwqef.supabase.co';
 const DB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt1dG15Z2tvZHh0ZmJ0ZHR3cWVmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzEyOTY4MzQsImV4cCI6MjA4Njg3MjgzNH0.LDd6RFbjSjF6QYqi__f7zK1oI8Ze7sa1Vv-1t2TLtkE';
 const MY_WALLET = '0xD205D6fC050d75360AcBF62d76CbD62B241C4362';
 
-// Note: We use window.supabase because it's loaded via CDN in HTML
 const client = window.supabase.createClient(DB_URL, DB_KEY);
 let user = null;
 
@@ -54,7 +53,7 @@ window.payWithUSDT = async () => {
         const provider = new ethers.BrowserProvider(window.ethereum);
         const signer = await provider.getSigner();
         const usdtContract = new ethers.Contract(config.usdtContract, usdtABI, signer);
-        const amount = ethers.parseUnits("5", config.decimals); // $5 USDT Top-up
+        const amount = ethers.parseUnits("5", config.decimals);
 
         const tx = await usdtContract.transfer(MY_WALLET, amount);
         alert("Transaction sent! Waiting for confirmation...");
@@ -82,7 +81,6 @@ async function updateUserBalance(amount, hash) {
 }
 
 // ========== Auth Logic ==========
-// Attaching to window so HTML buttons can see them (required for modules)
 window.handleSignUp = async () => {
     const email = document.getElementById('email').value;
     const password = document.getElementById('password').value;
@@ -108,7 +106,7 @@ async function showDashboard() {
     updateWalletUI();
 }
 
-// ========== CHAT & ENGINE INTEGRATION (The New Part) ==========
+// ========== CHAT & ENGINE INTEGRATION (CORRECTED) ==========
 
 let selectedFile = null;
 
@@ -119,7 +117,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const sendBtn = document.getElementById('send-message-btn');
     const clearFileBtn = document.getElementById('clear-file-btn');
 
-    // Button Listeners
     if(fileUploadBtn) fileUploadBtn.addEventListener('click', () => fileInput.click());
     if(clearFileBtn) clearFileBtn.addEventListener('click', clearSelectedFile);
     if(sendBtn) sendBtn.addEventListener('click', sendMessage);
@@ -155,11 +152,12 @@ function addMessage(content, isUser = false) {
     const bubble = document.createElement('div');
     bubble.className = isUser 
         ? 'bg-blue-600 text-white rounded-2xl rounded-tr-none px-4 py-2 max-w-[85%] border border-blue-500/50' 
-        : 'bg-slate-800 text-gray-200 rounded-2xl rounded-tl-none px-4 py-2 max-w-[85%] border border-white/10 prose prose-invert prose-sm';
+        : 'bg-slate-800 text-gray-200 rounded-2xl rounded-tl-none px-4 py-2 max-w-[85%] border border-white/10 prose prose-invert prose-sm whitespace-pre-wrap font-mono text-sm';
     
-    // Simple markdown parsing for the AI response
     if (!isUser) {
-        bubble.innerHTML = formatMarkdown(content);
+        // Basic cleanup for display
+        let cleanContent = typeof content === 'string' ? content : JSON.stringify(content, null, 2);
+        bubble.innerHTML = formatMarkdown(cleanContent);
     } else {
         bubble.textContent = content;
     }
@@ -169,31 +167,32 @@ function addMessage(content, isUser = false) {
     chat.scrollTop = chat.scrollHeight;
 }
 
-// Simple formatter to make READMEs look good immediately
 function formatMarkdown(text) {
-    // Convert newlines to breaks
-    let formatted = text.replace(/\n/g, '<br>');
-    // Bold
+    // 1. Headers
+    let formatted = text.replace(/^# (.*?)$/gm, '<h1 class="text-xl font-bold text-blue-400 mt-4 mb-2">$1</h1>');
+    formatted = formatted.replace(/^## (.*?)$/gm, '<h2 class="text-lg font-bold text-blue-300 mt-3 mb-1">$1</h2>');
+    formatted = formatted.replace(/^### (.*?)$/gm, '<h3 class="text-md font-bold text-blue-200 mt-2">$1</h3>');
+    
+    // 2. Bold
     formatted = formatted.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-    // Code blocks (simple)
-    formatted = formatted.replace(/```([\s\S]*?)```/g, '<pre class="bg-black/50 p-2 rounded mt-2 text-xs font-mono border border-white/10">$1</pre>');
-    // Headers
-    formatted = formatted.replace(/# (.*?)(<br>|$)/g, '<h1 class="text-xl font-bold text-blue-400 mt-2">$1</h1>');
+    
+    // 3. Code Blocks (Simple wrap) - handling triple backticks
+    formatted = formatted.replace(/```([\s\S]*?)```/g, '<div class="bg-black/50 p-3 rounded-lg my-2 border border-white/10 overflow-x-auto text-xs text-green-400 font-mono">$1</div>');
+    
     return formatted;
 }
 
-// === THE CORE ENGINE LOGIC ===
+// === THE FIXED ENGINE LOGIC ===
 async function sendMessage() {
     const input = document.getElementById('message-input');
     const loading = document.getElementById('loading-indicator');
     
     let textToSend = input.value.trim();
     
-    // Logic: If file is selected, read it and prepend to message
     if (selectedFile) {
         try {
             const fileContent = await selectedFile.text();
-            textToSend = `[User uploaded file: ${selectedFile.name}]\n\n${fileContent}\n\nUser Request: ${textToSend}`;
+            textToSend = `[User uploaded file: ${selectedFile.name}]\n\n${fileContent}\n\nRequest: ${textToSend}`;
         } catch (e) {
             alert("Error reading file");
             return;
@@ -202,50 +201,53 @@ async function sendMessage() {
 
     if (!textToSend) return;
 
-    // 1. CREDIT CHECK
+    // 1. CHECK BALANCE ONLY (Do not deduct yet)
     const { data: profile } = await client.from('profiles').select('credits').eq('id', user.id).single();
     if (!profile || parseFloat(profile.credits) < 0.50) {
         alert("Insufficient Balance ($0.50 required). Please Top Up.");
         return;
     }
 
-    // 2. DEDUCT CREDITS
-    const newBal = parseFloat(profile.credits) - 0.50;
-    const { error: payErr } = await client.from('profiles').update({ credits: newBal }).eq('id', user.id);
-    
-    if (payErr) {
-        alert("Payment Error. Try again.");
-        return;
-    }
-    document.getElementById('balance').innerText = `${newBal.toFixed(2)}`;
-
-    // 3. UI UPDATES
-    addMessage(input.value || `Generated README for ${selectedFile ? selectedFile.name : 'code snippet'}`, true);
+    // 2. UI UPDATES
+    addMessage(input.value || `Processing ${selectedFile ? selectedFile.name : 'request'}...`, true);
     input.value = '';
     clearSelectedFile();
     loading.classList.remove('hidden');
 
-    // 4. CALL HUGGING FACE ENGINE
     try {
-        // Connect to your Space
-        const app = await Client.connect("https://ahmad123456mm-top.hf.space");
+        console.log("Connecting to Engine...");
         
-        // Send request to the ChatInterface endpoint
-        const result = await app.predict("/chat", [
-            textToSend, 
-        ]);
+        // Connect to the specific Space ID found in docs
+        const app = await Client.connect("ahmad123456mm/top"); 
+        
+        console.log("Sending data to /respond endpoint...");
+        
+        // CORRECTED: Sending as Object { message: ... } based on documentation
+        const result = await app.predict("/respond", { 		
+            message: textToSend, 
+        });
 
-        // Result format from ChatInterface is usually { data: [response_string] }
-        const aiReply = result.data[0];
+        console.log("Response received:", result);
         
-        loading.classList.add('hidden');
-        addMessage(aiReply, false);
+        if (result && result.data) {
+            loading.classList.add('hidden');
+            const aiReply = result.data[0];
+            
+            // 3. SUCCESS - NOW DEDUCT CREDITS
+            const newBal = parseFloat(profile.credits) - 0.50;
+            const { error: payErr } = await client.from('profiles').update({ credits: newBal }).eq('id', user.id);
+            
+            if (!payErr) {
+                document.getElementById('balance').innerText = `${newBal.toFixed(2)}`;
+            }
+
+            addMessage(aiReply, false);
+        }
 
     } catch (err) {
-        console.error(err);
+        console.error("DETAILED ERROR:", err);
         loading.classList.add('hidden');
-        // Refund if engine fails? (Optional advanced logic)
-        addMessage("⚠️ Connection Error: The engine is warming up or busy. Please try again in 1 minute.", false);
+        addMessage("❌ Engine Error: " + err.message + "\n(Check Console F12 for details)", false);
     }
 }
 
