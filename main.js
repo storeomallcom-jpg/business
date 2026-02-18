@@ -1,107 +1,117 @@
-// ========== Configuration & Initialisation ==========
+// ========== CONFIGURATION ==========
 const DB_URL = 'https://kutmygkodxtfbtdtwqef.supabase.co';
 const DB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt1dG15Z2tvZHh0ZmJ0ZHR3cWVmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzEyOTY4MzQsImV4cCI6MjA4Njg3MjgzNH0.LDd6RFbjSjF6QYqi__f7zK1oI8Ze7sa1Vv-1t2TLtkE';
-const MY_WALLET = '0xD205D6fC050d75360AcBF62d76CbD62B241C4362';
 const HF_TOKEN = "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"; 
 
 const client = window.supabase.createClient(DB_URL, DB_KEY);
 let user = null;
 let selectedFile = null;
 
-const NETWORKS = {
-    polygon: { chainId: '0x89', usdtContract: '0xc2132D05D31c914a87C6611C10748AEb04B58e8F', decimals: 6 },
-    bsc: { chainId: '0x38', usdtContract: '0x55d398326f99059fF775485246999027B3197955', decimals: 18 }
-};
+// ========== BEAUTIFUL MARKDOWN RENDERER ==========
+function formatMarkdown(text) {
+    if (!text) return "";
+    return text
+        .replace(/^# (.*$)/gm, '<h1 class="text-3xl font-black text-blue-400 my-6 tracking-tight">$1</h1>')
+        .replace(/^## (.*$)/gm, '<h2 class="text-xl font-bold text-blue-300 mt-8 mb-4 border-b border-white/10 pb-2">$1</h2>')
+        .replace(/^### (.*$)/gm, '<h3 class="text-lg font-bold text-blue-200 mt-6 mb-2">$1</h3>')
+        .replace(/\*\*(.*?)\*\*/g, '<strong class="text-white font-bold">$1</strong>')
+        .replace(/`([^`]+)`/g, '<code class="bg-slate-700/50 text-pink-400 px-1.5 py-0.5 rounded font-mono text-xs">$1</code>')
+        .replace(/```([\s\S]*?)```/g, '<pre class="bg-black/60 p-5 rounded-2xl my-6 border border-white/5 overflow-x-auto font-mono text-green-400 text-xs leading-relaxed">$1</pre>')
+        .replace(/\n/g, '<br>');
+}
 
-const usdtABI = ["function transfer(address to, uint256 value) public returns (bool)"];
+// ========== CORE ENGINE (SURVIVAL MODE) ==========
+async function generateReadme() {
+    const input = document.getElementById('message-input');
+    const loading = document.getElementById('loading-indicator');
+    const chatDisplay = document.getElementById('chat-messages');
+    
+    if (!selectedFile) return alert("Please upload your code first!");
 
-// 1 credit = $0.50
-const CREDITS_PER_USDT = 2; // $1 = 2 credits
+    // 1. Check Balance BEFORE everything
+    const { data: profile, error: pErr } = await client.from('profiles').select('credits').eq('id', user.id).single();
+    if (pErr || profile.credits < 0.50) return alert("Insufficient Balance ($0.50 required)");
 
-// ========== Wallet Logic ==========
-async function updateWalletUI() {
-    if (window.ethereum) {
+    loading.classList.remove('hidden');
+    chatDisplay.innerHTML = `<div class="text-center py-20 animate-pulse font-mono text-blue-400">SELECTING BEST ENGINE...</div>`;
+
+    const modelStack = [
+        "deepseek-ai/DeepSeek-V3", 
+        "Qwen/Qwen2.5-Coder-32B-Instruct",
+        "Qwen/Qwen2.5-Coder-7B-Instruct"
+    ];
+
+    let fileContent = await selectedFile.text();
+    let finalReadme = null;
+    let usedModel = "";
+
+    // 2. Fallback Logic: Try models until one works
+    for (let modelName of modelStack) {
+        if (finalReadme) break;
         try {
-            const accounts = await window.ethereum.request({ method: 'eth_accounts' });
-            if (accounts.length > 0) {
-                const addr = accounts[0];
-                const statusEl = document.getElementById('wallet-status');
-                if(statusEl) {
-                    statusEl.innerText = `Wallet: ${addr.substring(0,6)}...${addr.substring(addr.length-4)}`;
-                    statusEl.classList.replace('text-blue-400', 'text-green-400');
-                }
-                return true;
+            const response = await fetch("https://router.huggingface.co/v1/chat/completions", {
+                method: "POST",
+                headers: { "Authorization": `Bearer ${HF_TOKEN}`, "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    "model": modelName,
+                    "messages": [
+                        { "role": "system", "content": "Output ONLY raw markdown README. No intro text, no conversational filler." },
+                        { "role": "user", "content": `User Instructions: ${input.value}\n\nCode:\n${fileContent}` }
+                    ],
+                    "max_tokens": 2000
+                })
+            });
+
+            if (response.ok) {
+                const result = await response.json();
+                finalReadme = result.choices[0].message.content;
+                usedModel = modelName;
+            } else {
+                console.warn(`Model ${modelName} failed with status ${response.status}`);
             }
-        } catch (e) { console.error(e); }
+        } catch (e) { console.error(`Failed on ${modelName}`); }
     }
-    return false;
+
+    // 3. Deduction & UI Rendering
+    if (finalReadme) {
+        // DEDUCT ONLY ON SUCCESS
+        const newCredits = profile.credits - 0.50;
+        await client.from('profiles').update({ credits: newCredits }).eq('id', user.id);
+        document.getElementById('balance').innerText = newCredits.toFixed(2);
+
+        loading.classList.add('hidden');
+        chatDisplay.innerHTML = `
+            <div class="bg-slate-800/40 p-8 rounded-3xl border border-white/10 shadow-2xl relative group">
+                <div class="absolute -top-3 left-6 bg-blue-600 text-[9px] px-2 py-0.5 rounded-full font-mono uppercase tracking-widest">Generated by ${usedModel.split('/')[1]}</div>
+                <button onclick="navigator.clipboard.writeText(\`${finalReadme.replace(/`/g, '\\`').replace(/\$/g, '\\$')}\`)" 
+                        class="absolute top-6 right-6 bg-white/5 hover:bg-blue-600 text-white text-[10px] uppercase font-bold px-4 py-2 rounded-lg transition-all">
+                    Copy
+                </button>
+                <div class="markdown-body">${formatMarkdown(finalReadme)}</div>
+                <button id="dl-final" class="mt-8 w-full bg-blue-600 hover:bg-blue-500 p-4 rounded-2xl font-black uppercase tracking-widest transition-all">
+                    Download README.md
+                </button>
+            </div>`;
+
+        document.getElementById('dl-final').onclick = () => {
+            const blob = new Blob([finalReadme], { type: 'text/markdown' });
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob); a.download = "README.md"; a.click();
+        };
+    } else {
+        loading.classList.add('hidden');
+        chatDisplay.innerHTML = `<p class="text-red-400 text-center font-mono py-10">ERROR: All models reached free limits. Try again later. No credits deducted.</p>`;
+    }
 }
 
-window.payWithUSDT = async () => {
-    if (typeof window.ethereum === 'undefined') return alert("Please install MetaMask!");
-    try {
-        const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
-        await updateWalletUI();
-        const networkKey = document.getElementById('crypto-network').value;
-        const config = NETWORKS[networkKey];
-        try {
-            await window.ethereum.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: config.chainId }] });
-        } catch (e) { alert("Switch to " + networkKey); return; }
-
-        const provider = new ethers.BrowserProvider(window.ethereum);
-        const signer = await provider.getSigner();
-        const usdtContract = new ethers.Contract(config.usdtContract, usdtABI, signer);
-        const amount = ethers.parseUnits("5", config.decimals); // Pay 5 USDT
-
-        const tx = await usdtContract.transfer(MY_WALLET, amount);
-        const receipt = await tx.wait();
-        if (receipt.status === 1) {
-            // 5 USDT = 10 credits
-            updateUserBalance(5 * CREDITS_PER_USDT, tx.hash);
-        }
-    } catch (err) { alert("Payment Failed: " + err.message); }
-};
-
-async function updateUserBalance(amount, hash) {
-    if (!user) return;
-    const { data: profile } = await client.from('profiles').select('credits').eq('id', user.id).single();
-    const newBal = parseFloat(profile?.credits || 0) + amount;
-    await client.from('profiles').update({ credits: newBal }).eq('id', user.id);
-    document.getElementById('balance').innerText = `${newBal.toFixed(2)}`;
-}
-
-// ========== Auth Logic ==========
-window.handleSignUp = async () => {
-    const email = document.getElementById('email').value;
-    const password = document.getElementById('password').value;
-    const { error } = await client.auth.signUp({ email, password });
-    if (error) alert(error.message); else alert("Check email!");
-};
-
-window.handleSignIn = async () => {
-    const email = document.getElementById('email').value;
-    const password = document.getElementById('password').value;
-    const { data, error } = await client.auth.signInWithPassword({ email, password });
-    if (error) alert(error.message); else { user = data.user; showDashboard(); }
-};
-
-window.handleSignOut = async () => { await client.auth.signOut(); location.reload(); };
-
-async function showDashboard() {
-    document.getElementById('auth-screen').classList.add('hidden');
-    document.getElementById('dashboard-screen').classList.remove('hidden');
-    const { data } = await client.from('profiles').select('credits').eq('id', user.id).single();
-    if (data) document.getElementById('balance').innerText = `${data.credits.toFixed(2)}`;
-    updateWalletUI();
-}
-
-// ========== UI Helpers & Markdown ==========
+// ========== AUTH & UI HELPERS ==========
 document.addEventListener('DOMContentLoaded', () => {
-    document.getElementById('file-upload-btn').onclick = () => document.getElementById('file-input').click();
-    document.getElementById('clear-file-btn').onclick = clearSelectedFile;
+    const fileInput = document.getElementById('file-input');
+    document.getElementById('file-upload-btn').onclick = () => fileInput.click();
     document.getElementById('send-message-btn').onclick = generateReadme;
-    document.getElementById('file-input').onchange = (e) => {
-        if (e.target.files.length > 0) {
+    
+    fileInput.onchange = (e) => {
+        if (e.target.files[0]) {
             selectedFile = e.target.files[0];
             document.getElementById('file-name').innerText = selectedFile.name;
             document.getElementById('file-preview').classList.remove('hidden');
@@ -109,80 +119,17 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 });
 
-function clearSelectedFile() {
-    selectedFile = null;
-    document.getElementById('file-input').value = '';
-    document.getElementById('file-preview').classList.add('hidden');
+// Auth Persistence
+client.auth.getSession().then(({ data: { session } }) => { 
+    if (session) { user = session.user; showDashboard(); } 
+});
+
+function showDashboard() {
+    document.getElementById('auth-screen').classList.add('hidden');
+    document.getElementById('dashboard-screen').classList.remove('hidden');
+    client.from('profiles').select('credits').eq('id', user.id).single().then(({data}) => {
+        if(data) document.getElementById('balance').innerText = data.credits.toFixed(2);
+    });
 }
 
-function formatMarkdown(text) {
-    return text
-        .replace(/^# (.*?)$/gm, '<h1 class="text-2xl font-bold text-blue-400 my-4">$1</h1>')
-        .replace(/^## (.*?)$/gm, '<h2 class="text-xl font-bold text-blue-300 mt-4 mb-2">$2</h2>')
-        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-        .replace(/```([\s\S]*?)```/g, '<pre class="bg-black/50 p-4 rounded-lg my-3 border border-white/10 overflow-x-auto font-mono text-green-400 text-xs">$1</pre>')
-        .replace(/\n/g, '<br>');
-}
-
-// ========== THE CORE README ENGINE ($0.50 Logic) ==========
-async function generateReadme() {
-    const input = document.getElementById('message-input');
-    const loading = document.getElementById('loading-indicator');
-    const chat = document.getElementById('chat-messages');
-    let userTask = input.value.trim();
-
-    if (!selectedFile) return alert("Please upload a file first!");
-
-    const { data: profile } = await client.from('profiles').select('credits').eq('id', user.id).single();
-    if (!profile || profile.credits < 0.50) return alert("Insufficient Balance ($0.50 required)");
-
-    // Clear previous messages and show spinner only
-    chat.innerHTML = '';
-    loading.classList.remove('hidden');
-
-    try {
-        const fileContent = await selectedFile.text();
-        const response = await fetch("https://router.huggingface.co/v1/chat/completions", {
-            method: "POST",
-            headers: { "Authorization": `Bearer ${HF_TOKEN}`, "Content-Type": "application/json" },
-            body: JSON.stringify({
-                "model": "deepseek-ai/DeepSeek-V3",
-                "messages": [{ "role": "user", "content": `Generate professional README.md for this code. User instructions: ${userTask}\n\nCODE:\n${fileContent}` }],
-                "max_tokens": 3000
-            })
-        });
-
-        const result = await response.json();
-        if (result.choices) {
-            const readme = result.choices[0].message.content;
-            
-            // 💰 DEDUCT CREDITS (fix: add 'id' column)
-            const newBal = profile.credits - 0.50;
-            await client.from('profiles').update({ credits: newBal }).eq('id', user.id);
-            document.getElementById('balance').innerText = newBal.toFixed(2);
-
-            loading.classList.add('hidden');
-            chat.innerHTML = `
-                <div class="bg-slate-800 p-6 rounded-2xl border border-white/10 shadow-2xl relative group">
-                    <div class="mb-4 text-sm text-gray-400 italic border-l-4 border-blue-500 pl-3">
-                        <strong>Instruction:</strong> ${userTask}
-                    </div>
-                    <button onclick="navigator.clipboard.writeText(\`${readme.replace(/`/g, '\\`')}\`)" class="absolute top-4 right-4 bg-blue-600 text-xs px-3 py-1 rounded">Copy</button>
-                    <div class="prose prose-invert max-w-none">${formatMarkdown(readme)}</div>
-                    <button id="dl-btn" class="mt-6 w-full bg-green-600 p-3 rounded-xl font-bold">⬇️ Download README.md</button>
-                </div>`;
-            
-            document.getElementById('dl-btn').onclick = () => {
-                const blob = new Blob([readme], { type: 'text/markdown' });
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url; a.download = "README.md"; a.click();
-            };
-        }
-    } catch (e) { 
-        alert("Engine Error: " + e.message);
-        loading.classList.add('hidden');
-    }
-}
-
-client.auth.getSession().then(({ data: { session } }) => { if (session) { user = session.user; showDashboard(); } });
+window.handleSignOut = async () => { await client.auth.signOut(); location.reload(); };
