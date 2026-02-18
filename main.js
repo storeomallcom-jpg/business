@@ -2,8 +2,9 @@
 const DB_URL = 'https://kutmygkodxtfbtdtwqef.supabase.co';
 const DB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt1dG15Z2tvZHh0ZmJ0ZHR3cWVmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzEyOTY4MzQsImV4cCI6MjA4Njg3MjgzNH0.LDd6RFbjSjF6QYqi__f7zK1oI8Ze7sa1Vv-1t2TLtkE';
 
-// انتبه: تأكد من وضع المفتاح بين علامتي التنصيص وبدون أي مسافات زائدة
-const GROQ_API_KEY = "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".trim(); 
+// تنظيف المفتاح من أي رموز مخفية تماماً
+const RAW_KEY = "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";
+const GROQ_API_KEY = RAW_KEY.replace(/[^\x20-\x7E]/g, "").trim(); 
 
 const client = window.supabase.createClient(DB_URL, DB_KEY);
 let user = null;
@@ -13,7 +14,6 @@ let selectedFile = null;
 function formatMarkdown(text) {
     if (!text) return "";
     let cleanText = text.replace(/^(Certainly|Here is|Sure|I've generated).*\n/gi, "");
-    
     return cleanText
         .replace(/^# (.*$)/gm, '<h1 class="text-3xl font-black text-blue-400 my-6 tracking-tight">$1</h1>')
         .replace(/^## (.*$)/gm, '<h2 class="text-xl font-bold text-blue-300 mt-8 mb-4 border-b border-white/10 pb-2">$1</h2>')
@@ -23,7 +23,7 @@ function formatMarkdown(text) {
         .replace(/\n/g, '<br>');
 }
 
-// ========== CORE ENGINE (GROQ STABLE) ==========
+// ========== CORE ENGINE (FIXED HEADERS) ==========
 async function generateReadme() {
     const input = document.getElementById('message-input');
     const loading = document.getElementById('loading-indicator');
@@ -31,29 +31,30 @@ async function generateReadme() {
     
     if (!selectedFile) return alert("Please upload your code first!");
 
-    // 1. فحص الرصيد
     const { data: profile, error: pErr } = await client.from('profiles').select('credits').eq('id', user.id).single();
     if (pErr || profile.credits < 0.50) return alert("Insufficient Balance ($0.50 required)");
 
     loading.classList.remove('hidden');
-    chatDisplay.innerHTML = `<div class="text-center py-20 animate-pulse font-mono text-blue-400">CONNECTING TO GROQ NEURAL LINK...</div>`;
+    chatDisplay.innerHTML = `<div class="text-center py-20 animate-pulse font-mono text-blue-400 italic">SECURE CONNECTION IN PROGRESS...</div>`;
 
     try {
         let fileContent = await selectedFile.text();
 
-        // 2. طلب الـ API مع تنظيف الرؤوس (Headers)
+        // الحل الجذري لخطأ ISO-8859-1: بناء الـ Headers ككائن نظيف
+        const requestHeaders = new Headers();
+        requestHeaders.append("Authorization", "Bearer " + GROQ_API_KEY);
+        requestHeaders.append("Content-Type", "application/json");
+
         const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
             method: "POST",
-            headers: { 
-                "Authorization": "Bearer " + GROQ_API_KEY, // الربط اليدوي لضمان عدم وجود رموز غريبة
-                "Content-Type": "application/json" 
-            },
+            headers: requestHeaders,
             body: JSON.stringify({
                 "model": "llama-3.3-70b-versatile",
                 "messages": [
                     { "role": "system", "content": "Professional README generator. ONLY raw markdown." },
-                    { "role": "user", "content": `Code:\n${fileContent.substring(0, 10000)}` }
-                ]
+                    { "role": "user", "content": "Code:\n" + fileContent.substring(0, 8000) }
+                ],
+                "temperature": 0.5
             })
         });
 
@@ -65,15 +66,14 @@ async function generateReadme() {
         const result = await response.json();
         const finalReadme = result.choices[0].message.content;
 
-        // 3. الخصم والإنهاء
         await client.from('profiles').update({ credits: profile.credits - 0.50 }).eq('id', user.id);
         document.getElementById('balance').innerText = (profile.credits - 0.50).toFixed(2);
 
         loading.classList.add('hidden');
         chatDisplay.innerHTML = `
-            <div class="bg-slate-800/40 p-8 rounded-3xl border border-white/10 relative">
+            <div class="bg-slate-800/40 p-8 rounded-3xl border border-white/10 relative group">
                 <div class="markdown-body">${formatMarkdown(finalReadme)}</div>
-                <button id="dl-final" class="mt-8 w-full bg-blue-600 p-4 rounded-xl font-black">Download .md</button>
+                <button id="dl-final" class="mt-8 w-full bg-blue-600 hover:bg-blue-500 p-4 rounded-xl font-black uppercase tracking-widest transition-all">Download .md</button>
             </div>`;
 
         document.getElementById('dl-final').onclick = () => {
@@ -83,9 +83,9 @@ async function generateReadme() {
         };
 
     } catch (err) {
-        console.error(err);
+        console.error("Debug Error:", err);
         loading.classList.add('hidden');
-        chatDisplay.innerHTML = `<p class="text-red-400 text-center py-10">ERROR: ${err.message}</p>`;
+        chatDisplay.innerHTML = `<p class="text-red-400 text-center py-10 font-mono italic">CONNECTION REFUSED: ${err.message}</p>`;
     }
 }
 
