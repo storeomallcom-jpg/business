@@ -9,8 +9,16 @@ const GROQ_API_KEY = RAW_KEY.replace(/[^\x20-\x7E]/g, "").trim();
 const client = window.supabase.createClient(DB_URL, DB_KEY);
 let user = null;
 let selectedFile = null;
+let provider, signer;
 
-// ========== BEAUTIFUL MARKDOWN RENDERER ==========
+// USDT contract addresses (Polygon & BSC)
+const USDT_ADDRESSES = {
+    polygon: '0xc2132D05D31c914a87C6611C10748AEb04B58e8F',
+    bsc: '0x55d398326f99059fF775485246999027B3197955'
+};
+const RECEIVER_WALLET = '0xYourReceivingWalletAddressHere'; // Replace with your wallet
+
+// ========== BEAUTIFUL MARKDOWN RENDERER (UNCHANGED) ==========
 function formatMarkdown(text) {
     if (!text) return "";
     // حذف مقدمات الذكاء الاصطناعي المعتادة
@@ -25,17 +33,30 @@ function formatMarkdown(text) {
         .replace(/\n/g, '<br>');
 }
 
-// ========== CORE ENGINE (FIXED & CLEANED) ==========
+// ========== CORE ENGINE (UNCHANGED except credit check/deduct) ==========
 async function generateReadme() {
     const input = document.getElementById('message-input');
     const loading = document.getElementById('loading-indicator');
     const chatDisplay = document.getElementById('chat-messages');
     
     if (!selectedFile) return alert("Please upload your code first!");
+    if (!user) return alert("You must be logged in!");
 
     // 1. التحقق من الرصيد في Supabase
-    const { data: profile, error: pErr } = await client.from('profiles').select('credits').eq('id', user.id).single();
-    if (pErr || profile.credits < 0.50) return alert("Insufficient Balance ($0.50 required)");
+    const { data: profile, error: pErr } = await client
+        .from('profiles')
+        .select('credits')
+        .eq('id', user.id)
+        .single();
+    
+    if (pErr || !profile) {
+        console.error("Profile error:", pErr);
+        return alert("Could not verify credits. Please try again.");
+    }
+    
+    if (profile.credits < 0.50) {
+        return alert("Insufficient Balance — $0.50 required. Please top up.");
+    }
 
     loading.classList.remove('hidden');
     chatDisplay.innerHTML = `<div class="text-center py-20 animate-pulse font-mono text-blue-400 italic font-bold">QWEN AI IS ANALYZING YOUR CODE...</div>`;
@@ -53,7 +74,7 @@ async function generateReadme() {
             method: "POST",
             headers: requestHeaders,
             body: JSON.stringify({
-                "model": "qwen/qwen3-32b", // هذا هو الموديل الأذكى المتاح لك حالياً
+                "model": "qwen/qwen3-32b",
                 "messages": [
                     { 
                         "role": "system", 
@@ -82,9 +103,11 @@ async function generateReadme() {
         const result = await response.json();
         const finalReadme = result.choices[0].message.content;
 
-        // 4. تحديث الرصيد وعرض النتيجة
+        // 4. تحديث الرصيد (خصم 0.50)
         const updatedCredits = profile.credits - 0.50;
         await client.from('profiles').update({ credits: updatedCredits }).eq('id', user.id);
+        
+        // تحديث عرض الرصيد
         document.getElementById('balance').innerText = updatedCredits.toFixed(2);
 
         loading.classList.add('hidden');
@@ -113,11 +136,154 @@ async function generateReadme() {
     }
 }
 
+// ========== AUTH FUNCTIONS ==========
+async function handleSignUp() {
+    const email = document.getElementById('email').value;
+    const password = document.getElementById('password').value;
+    if (!email || !password) return alert("Email and password required.");
+
+    const { data, error } = await client.auth.signUp({ email, password });
+    if (error) return alert(error.message);
+    
+    // بعد التسجيل، نقوم بإنشاء صف في جدول profiles برصيد 0
+    if (data.user) {
+        await client.from('profiles').insert([{ id: data.user.id, email, credits: 0 }]);
+        alert("Account created! Please log in.");
+    }
+}
+
+async function handleSignIn() {
+    const email = document.getElementById('email').value;
+    const password = document.getElementById('password').value;
+    if (!email || !password) return alert("Email and password required.");
+
+    const { data, error } = await client.auth.signInWithPassword({ email, password });
+    if (error) return alert(error.message);
+
+    user = data.user;
+    await ensureProfile();
+    showDashboard();
+}
+
+async function handleSignOut() {
+    await client.auth.signOut();
+    user = null;
+    document.getElementById('auth-screen').classList.remove('hidden');
+    document.getElementById('dashboard-screen').classList.add('hidden');
+    document.getElementById('wallet-status').innerText = 'Wallet: Disconnected';
+}
+
+// التأكد من وجود بروفايل للمستخدم (إذا لم يكن موجوداً بسبب خطأ)
+async function ensureProfile() {
+    const { data, error } = await client.from('profiles').select('*').eq('id', user.id).single();
+    if (error || !data) {
+        // إنشاء بروفايل جديد
+        await client.from('profiles').insert([{ 
+            id: user.id, 
+            email: user.email, 
+            credits: 0 
+        }]);
+    }
+}
+
+function showDashboard() {
+    document.getElementById('auth-screen').classList.add('hidden');
+    document.getElementById('dashboard-screen').classList.remove('hidden');
+    updateBalanceDisplay();
+}
+
+async function updateBalanceDisplay() {
+    if (!user) return;
+    const { data } = await client.from('profiles').select('credits').eq('id', user.id).single();
+    if (data) document.getElementById('balance').innerText = data.credits.toFixed(2);
+}
+
+// ========== PAYMENT (MetaMask) ==========
+async function payWithUSDT() {
+    if (!user) return alert("Please log in first.");
+
+    // 1. التحقق من وجود MetaMask
+    if (!window.ethereum) return alert("MetaMask not installed!");
+
+    try {
+        // 2. طلب الاتصال بالحسابات
+        await window.ethereum.request({ method: 'eth_requestAccounts' });
+        provider = new ethers.BrowserProvider(window.ethereum);
+        signer = await provider.getSigner();
+
+        // 3. تحديث واجهة المحفظة
+        const address = await signer.getAddress();
+        document.getElementById('wallet-status').innerText = `Wallet: ${address.slice(0,6)}...${address.slice(-4)}`;
+
+        // 4. اختيار الشبكة
+        const network = document.getElementById('crypto-network').value;
+        const chainId = network === 'polygon' ? 137 : 56;
+        const usdtAddress = USDT_ADDRESSES[network];
+
+        // 5. التبديل إلى الشبكة المطلوبة
+        try {
+            await window.ethereum.request({
+                method: 'wallet_switchEthereumChain',
+                params: [{ chainId: `0x${chainId.toString(16)}` }],
+            });
+        } catch (switchError) {
+            // إذا لم تكن الشبكة مضافة، نطلب إضافتها
+            if (switchError.code === 4902) {
+                await window.ethereum.request({
+                    method: 'wallet_addEthereumChain',
+                    params: [{
+                        chainId: `0x${chainId.toString(16)}`,
+                        chainName: network === 'polygon' ? 'Polygon Mainnet' : 'BNB Smart Chain',
+                        nativeCurrency: { name: network === 'polygon' ? 'MATIC' : 'BNB', symbol: network === 'polygon' ? 'MATIC' : 'BNB', decimals: 18 },
+                        rpcUrls: network === 'polygon' ? ['https://polygon-rpc.com'] : ['https://bsc-dataseed.binance.org/'],
+                        blockExplorerUrls: network === 'polygon' ? ['https://polygonscan.com'] : ['https://bscscan.com']
+                    }]
+                });
+            } else {
+                throw switchError;
+            }
+        }
+
+        // 6. إنشاء عقد USDT
+        const usdtContract = new ethers.Contract(usdtAddress, [
+            'function transfer(address to, uint amount) returns (bool)',
+            'function decimals() view returns (uint8)'
+        ], signer);
+
+        // 7. تحديد عدد الأصفار العشرية (decimals)
+        const decimals = await usdtContract.decimals(); // 6 on Polygon, 18 on BSC
+        const amount = ethers.parseUnits('5', decimals); // 5 USDT
+
+        // 8. إرسال التحويل
+        const tx = await usdtContract.transfer(RECEIVER_WALLET, amount);
+        document.getElementById('wallet-status').innerText = 'Transaction sent, waiting for confirmation...';
+
+        // 9. انتظار التأكيد
+        const receipt = await tx.wait();
+        if (receipt.status === 1) {
+            // 10. تحديث الرصيد في Supabase (إضافة 10 Credits)
+            const { data: profile } = await client.from('profiles').select('credits').eq('id', user.id).single();
+            const newCredits = (profile?.credits || 0) + 10;
+            await client.from('profiles').update({ credits: newCredits }).eq('id', user.id);
+            
+            document.getElementById('wallet-status').innerText = 'Payment confirmed! +10 credits.';
+            updateBalanceDisplay();
+        } else {
+            throw new Error('Transaction failed');
+        }
+    } catch (err) {
+        console.error(err);
+        alert('Payment error: ' + err.message);
+        document.getElementById('wallet-status').innerText = 'Wallet: Disconnected';
+    }
+}
+
 // ========== INITIALIZATION ==========
 document.addEventListener('DOMContentLoaded', () => {
     const fileInput = document.getElementById('file-input');
     const uploadBtn = document.getElementById('file-upload-btn');
     const sendBtn = document.getElementById('send-message-btn');
+    const clearFileBtn = document.getElementById('clear-file-btn');
 
     if (uploadBtn) uploadBtn.onclick = () => fileInput.click();
     if (sendBtn) sendBtn.onclick = generateReadme;
@@ -129,20 +295,26 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('file-preview').classList.remove('hidden');
         }
     };
-});
 
-// Auth Session Handling
-client.auth.getSession().then(({ data: { session } }) => { 
-    if (session) { 
-        user = session.user; 
-        showDashboard(); 
-    } 
-});
+    if (clearFileBtn) {
+        clearFileBtn.onclick = () => {
+            selectedFile = null;
+            document.getElementById('file-preview').classList.add('hidden');
+            fileInput.value = '';
+        };
+    }
 
-function showDashboard() {
-    document.getElementById('auth-screen').classList.add('hidden');
-    document.getElementById('dashboard-screen').classList.remove('hidden');
-    client.from('profiles').select('credits').eq('id', user.id).single().then(({data}) => {
-        if(data) document.getElementById('balance').innerText = data.credits.toFixed(2);
+    // استعادة الجلسة إن وجدت
+    client.auth.getSession().then(({ data: { session } }) => { 
+        if (session) { 
+            user = session.user; 
+            ensureProfile().then(() => showDashboard());
+        } 
     });
-}
+});
+
+// جعل الدوال المتعلقة بالـ UI عامة ليتم استدعاؤها من HTML
+window.handleSignIn = handleSignIn;
+window.handleSignUp = handleSignUp;
+window.handleSignOut = handleSignOut;
+window.payWithUSDT = payWithUSDT;
