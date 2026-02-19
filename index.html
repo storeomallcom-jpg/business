@@ -3,85 +3,87 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DS // AUTO-DOC ENGINE</title>
+    <title>AUTO-DOC AI | PREMIER ENGINE</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.7.0/ethers.umd.min.js"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        body { background: radial-gradient(circle at center, #0f172a 0%, #020617 100%); }
-        .glass { background: rgba(30, 41, 59, 0.5); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.1); }
+        body { background: #020617; color: white; font-family: 'Inter', sans-serif; }
+        .glass { background: rgba(15, 23, 42, 0.8); backdrop-filter: blur(16px); border: 1px solid rgba(255,255,255,0.05); }
+        .neon-border { border: 1px solid rgba(59, 130, 246, 0.5); box-shadow: 0 0 15px rgba(59, 130, 246, 0.2); }
     </style>
 </head>
-<body class="text-white min-h-screen flex items-center justify-center p-4">
+<body class="min-h-screen flex items-center justify-center p-4">
 
-    <!-- AUTH SCREEN -->
-    <div id="auth-screen" class="glass p-10 rounded-3xl w-full max-w-md shadow-2xl">
-        <h1 class="text-4xl font-black italic text-blue-500 mb-8 tracking-tighter text-center">DS // ACCESS</h1>
+    <div id="auth-screen" class="glass p-8 rounded-3xl w-full max-w-md shadow-2xl">
+        <div class="text-center mb-8">
+            <h1 class="text-3xl font-black italic text-blue-500 tracking-tighter">AI.DOC // ACCESS</h1>
+            <p class="text-gray-400 text-sm mt-2">Enter your credentials to start</p>
+        </div>
         <div class="space-y-4">
-            <input id="email" type="email" placeholder="Email" class="w-full p-4 bg-black/40 rounded-xl outline-none border border-white/5 focus:border-blue-500 transition">
-            <input id="password" type="password" placeholder="Password" class="w-full p-4 bg-black/40 rounded-xl outline-none border border-white/5 focus:border-blue-500 transition">
-            <button onclick="handleSignIn()" class="w-full bg-blue-600 hover:bg-blue-700 p-4 rounded-xl font-bold transition shadow-lg shadow-blue-600/20">Login Engine</button>
-            <button onclick="handleSignUp()" class="w-full text-gray-400 text-sm py-2">Create New Identity</button>
+            <input id="email" type="email" placeholder="Email" class="w-full p-4 bg-black/50 rounded-xl border border-white/10 focus:border-blue-500 outline-none transition">
+            <input id="password" type="password" placeholder="Password" class="w-full p-4 bg-black/50 rounded-xl border border-white/10 focus:border-blue-500 outline-none transition">
+            <button id="btn-signin" class="w-full bg-blue-600 hover:bg-blue-700 p-4 rounded-xl font-bold transition shadow-lg shadow-blue-600/30">Sign In</button>
+            <button id="btn-signup" class="w-full text-gray-500 text-xs hover:text-blue-400 transition">Create New Identity</button>
         </div>
     </div>
 
-    <!-- DASHBOARD SCREEN -->
-    <div id="dashboard-screen" class="hidden w-full max-w-5xl flex flex-col h-[90vh]">
-        <header class="flex flex-wrap justify-between items-center mb-6 glass p-4 rounded-2xl gap-4">
+    <div id="dashboard-screen" class="hidden w-full max-w-6xl h-[90vh] flex flex-col gap-4">
+        <header class="glass p-4 rounded-2xl flex justify-between items-center">
             <div class="flex items-center gap-4">
-                <span class="text-2xl font-black italic tracking-tighter">DS // <span class="text-blue-500">DOC</span></span>
-                <span id="wallet-status" class="text-[10px] font-mono text-blue-400 bg-blue-500/5 px-2 py-1 rounded border border-blue-500/20">Wallet: Disconnected</span>
+                <span class="text-xl font-black italic">AI.DOC</span>
+                <div id="wallet-status" class="px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/20 text-[10px] font-mono text-blue-400">
+                    Wallet: Not Connected
+                </div>
             </div>
             
-            <div class="flex items-center gap-3">
-                <div class="flex items-center bg-black/40 rounded-xl p-1 border border-white/5">
-                    <select id="crypto-network" class="bg-transparent text-xs p-2 outline-none">
+            <div class="flex items-center gap-4">
+                <div class="bg-black/40 rounded-xl p-1 border border-white/5 flex items-center">
+                    <select id="crypto-network" class="bg-transparent text-[10px] p-2 outline-none">
+                        <option value="bsc">BNB Smart Chain</option>
                         <option value="polygon">Polygon</option>
-                        <option value="bsc">BSC</option>
                     </select>
-                    <button onclick="payWithUSDT()" class="bg-green-600 hover:bg-green-500 px-4 py-2 rounded-lg text-xs font-bold transition">Top Up $5</button>
+                    <button id="btn-topup" class="bg-green-600 hover:bg-green-500 px-3 py-1.5 rounded-lg text-[10px] font-bold transition">Buy $5 Credit</button>
                 </div>
-                <div class="bg-blue-500/10 px-4 py-2 rounded-xl border border-blue-500/30">
+                <div class="bg-blue-600/20 px-4 py-2 rounded-xl border border-blue-600/40">
                     <span class="text-blue-400 font-mono font-bold">$<span id="balance">0.00</span></span>
                 </div>
-                <button onclick="handleSignOut()" class="text-red-400 p-2"><i class="fas fa-power-off"></i></button>
+                <button id="btn-signout" class="text-red-500 hover:text-red-400"><i class="fas fa-sign-out-alt"></i></button>
             </div>
         </header>
 
         <main class="flex-1 glass rounded-3xl overflow-hidden flex flex-col relative">
             <div id="chat-messages" class="flex-1 overflow-y-auto p-6 space-y-4">
-                <div class="text-center mt-20 text-gray-500">
-                    <i class="fas fa-file-export text-5xl mb-4 opacity-20"></i>
-                    <p class="font-mono text-sm">Waiting for code input...<br>Cost: $0.50 per professional README</p>
+                <div id="empty-state" class="h-full flex flex-col items-center justify-center opacity-30">
+                    <i class="fas fa-microchip text-6xl mb-4"></i>
+                    <p class="font-mono text-sm">UPLOAD CODE TO GENERATE MASTERPIECE</p>
+                    <p class="text-[10px] mt-2">COST: $0.50 PER DOCUMENT</p>
                 </div>
             </div>
 
-            <div id="loading-indicator" class="hidden absolute inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50">
+            <div id="loading-indicator" class="hidden absolute inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center z-50">
                 <div class="text-center">
-                    <div class="inline-block w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mb-4"></div>
-                    <p class="font-mono text-blue-400 animate-pulse">GENERATING DOCUMENTATION...</p>
+                    <div class="w-16 h-16 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                    <p class="text-blue-400 font-mono tracking-widest animate-pulse">AI ANALYZING & WRITING...</p>
                 </div>
             </div>
 
-            <div class="p-4 bg-slate-900/80 border-t border-white/5">
-                <div id="file-preview" class="hidden flex items-center gap-3 mb-3 bg-blue-500/10 p-2 rounded-lg border border-blue-500/20 text-xs">
-                    <i class="fas fa-code text-blue-400"></i>
-                    <span id="file-name" class="flex-1 truncate font-mono">file.js</span>
-                    <button id="clear-file-btn" class="text-red-400"><i class="fas fa-trash"></i></button>
+            <div class="p-6 border-t border-white/5 bg-black/20">
+                <div id="file-preview" class="hidden flex items-center gap-3 mb-4 bg-blue-500/10 p-3 rounded-xl border border-blue-500/20">
+                    <i class="fas fa-file-code text-blue-400"></i>
+                    <span id="file-name" class="flex-1 text-xs font-mono truncate">filename.js</span>
+                    <button id="btn-remove-file" class="text-red-400 hover:text-red-300"><i class="fas fa-times"></i></button>
                 </div>
 
-                <div class="flex items-center gap-3">
-                    <button id="file-upload-btn" class="w-12 h-12 rounded-full glass hover:text-blue-400 transition">
+                <div class="flex items-center gap-4">
+                    <button id="btn-upload" class="w-12 h-12 rounded-xl glass hover:bg-white/5 transition flex items-center justify-center text-xl">
                         <i class="fas fa-plus"></i>
                     </button>
                     <input type="file" id="file-input" class="hidden">
-                    
-                    <input type="text" id="message-input" placeholder="Any specific instructions? (e.g. Make it funny, or very technical)" 
-                           class="flex-1 bg-black/40 border border-white/5 rounded-2xl px-6 py-4 outline-none focus:border-blue-500 transition font-mono text-sm">
-                    
-                    <button id="send-message-btn" class="w-14 h-14 bg-blue-600 hover:bg-blue-700 rounded-2xl shadow-xl shadow-blue-600/20 transition flex items-center justify-center">
-                        <i class="fas fa-bolt text-xl"></i>
+                    <input id="instruction-input" type="text" placeholder="Special instructions (optional)..." class="flex-1 bg-black/40 border border-white/10 rounded-xl px-6 py-4 outline-none focus:border-blue-500 font-mono text-sm">
+                    <button id="btn-generate" class="h-12 px-8 bg-blue-600 hover:bg-blue-700 rounded-xl font-bold shadow-lg shadow-blue-600/20 transition">
+                        GENERATE
                     </button>
                 </div>
             </div>
