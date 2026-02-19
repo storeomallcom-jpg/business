@@ -3,93 +3,80 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AUTO-DOC AI | PREMIER ENGINE</title>
+    <title>AUTO-DOC ENGINE V2</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.7.0/ethers.umd.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         body { background: #020617; color: white; font-family: 'Inter', sans-serif; }
-        .glass { background: rgba(15, 23, 42, 0.8); backdrop-filter: blur(16px); border: 1px solid rgba(255,255,255,0.05); }
-        .neon-border { border: 1px solid rgba(59, 130, 246, 0.5); box-shadow: 0 0 15px rgba(59, 130, 246, 0.2); }
+        .glass { background: rgba(15, 23, 42, 0.7); backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,0.05); }
     </style>
 </head>
 <body class="min-h-screen flex items-center justify-center p-4">
 
-    <div id="auth-screen" class="glass p-8 rounded-3xl w-full max-w-md shadow-2xl">
-        <div class="text-center mb-8">
-            <h1 class="text-3xl font-black italic text-blue-500 tracking-tighter">AI.DOC // ACCESS</h1>
-            <p class="text-gray-400 text-sm mt-2">Enter your credentials to start</p>
-        </div>
+    <div id="auth-screen" class="glass p-10 rounded-[2rem] w-full max-w-md shadow-2xl">
+        <h1 class="text-3xl font-black italic text-blue-500 mb-6 text-center">DS // ACCESS</h1>
         <div class="space-y-4">
-            <input id="email" type="email" placeholder="Email" class="w-full p-4 bg-black/50 rounded-xl border border-white/10 focus:border-blue-500 outline-none transition">
-            <input id="password" type="password" placeholder="Password" class="w-full p-4 bg-black/50 rounded-xl border border-white/10 focus:border-blue-500 outline-none transition">
-            <button id="btn-signin" class="w-full bg-blue-600 hover:bg-blue-700 p-4 rounded-xl font-bold transition shadow-lg shadow-blue-600/30">Sign In</button>
-            <button id="btn-signup" class="w-full text-gray-500 text-xs hover:text-blue-400 transition">Create New Identity</button>
+            <input id="email" type="email" placeholder="Email" class="w-full p-4 bg-black/50 rounded-2xl border border-white/5 outline-none focus:border-blue-500 transition">
+            <input id="password" type="password" placeholder="Password" class="w-full p-4 bg-black/50 rounded-2xl border border-white/5 outline-none focus:border-blue-500 transition">
+            <button id="btn-signin" class="w-full bg-blue-600 hover:bg-blue-700 p-4 rounded-2xl font-bold transition shadow-lg shadow-blue-600/30">Enter Engine</button>
+            <button id="btn-signup" class="w-full text-gray-500 text-xs py-2 hover:text-blue-400 transition">Register Identity</button>
         </div>
     </div>
 
-    <div id="dashboard-screen" class="hidden w-full max-w-6xl h-[90vh] flex flex-col gap-4">
+    <div id="dashboard-screen" class="hidden w-full max-w-5xl h-[90vh] flex flex-col gap-4">
         <header class="glass p-4 rounded-2xl flex justify-between items-center">
             <div class="flex items-center gap-4">
-                <span class="text-xl font-black italic">AI.DOC</span>
-                <div id="wallet-status" class="px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/20 text-[10px] font-mono text-blue-400">
-                    Wallet: Not Connected
-                </div>
+                <span class="text-2xl font-black italic text-blue-500">DS.AI</span>
+                <div id="wallet-status" class="text-[10px] font-mono text-blue-400 bg-blue-500/5 px-3 py-1 rounded-full border border-blue-500/10">Wallet: Disconnected</div>
             </div>
             
             <div class="flex items-center gap-4">
-                <div class="bg-black/40 rounded-xl p-1 border border-white/5 flex items-center">
-                    <select id="crypto-network" class="bg-transparent text-[10px] p-2 outline-none">
-                        <option value="bsc">BNB Smart Chain</option>
+                <div class="flex items-center bg-black/40 rounded-xl p-1 border border-white/5">
+                    <select id="crypto-network" class="bg-transparent text-[10px] p-2 outline-none cursor-pointer">
+                        <option value="bsc">BSC (BNB Chain)</option>
                         <option value="polygon">Polygon</option>
                     </select>
-                    <button id="btn-topup" class="bg-green-600 hover:bg-green-500 px-3 py-1.5 rounded-lg text-[10px] font-bold transition">Buy $5 Credit</button>
+                    <button id="btn-topup" class="bg-green-600 hover:bg-green-500 px-4 py-2 rounded-lg text-xs font-bold transition">Buy $5 Credits</button>
                 </div>
-                <div class="bg-blue-600/20 px-4 py-2 rounded-xl border border-blue-600/40">
-                    <span class="text-blue-400 font-mono font-bold">$<span id="balance">0.00</span></span>
+                <div class="bg-blue-600/20 px-5 py-2 rounded-xl border border-blue-600/30">
+                    <span class="text-blue-400 font-mono font-black">$<span id="balance">0.00</span></span>
                 </div>
-                <button id="btn-signout" class="text-red-500 hover:text-red-400"><i class="fas fa-sign-out-alt"></i></button>
+                <button id="btn-signout" class="text-red-500 hover:scale-110 transition"><i class="fas fa-power-off"></i></button>
             </div>
         </header>
 
-        <main class="flex-1 glass rounded-3xl overflow-hidden flex flex-col relative">
-            <div id="chat-messages" class="flex-1 overflow-y-auto p-6 space-y-4">
-                <div id="empty-state" class="h-full flex flex-col items-center justify-center opacity-30">
-                    <i class="fas fa-microchip text-6xl mb-4"></i>
-                    <p class="font-mono text-sm">UPLOAD CODE TO GENERATE MASTERPIECE</p>
-                    <p class="text-[10px] mt-2">COST: $0.50 PER DOCUMENT</p>
+        <main class="flex-1 glass rounded-[2.5rem] overflow-hidden flex flex-col relative shadow-inner">
+            <div id="chat-messages" class="flex-1 overflow-y-auto p-8 space-y-6">
+                <div id="empty-state" class="h-full flex flex-col items-center justify-center text-gray-600">
+                    <i class="fas fa-terminal text-6xl mb-4 opacity-20"></i>
+                    <p class="font-mono text-sm uppercase tracking-widest">Awaiting Code Transmission...</p>
                 </div>
             </div>
 
-            <div id="loading-indicator" class="hidden absolute inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center z-50">
+            <div id="loading-indicator" class="hidden absolute inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50">
                 <div class="text-center">
-                    <div class="w-16 h-16 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-                    <p class="text-blue-400 font-mono tracking-widest animate-pulse">AI ANALYZING & WRITING...</p>
+                    <div class="w-16 h-16 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mb-4 mx-auto"></div>
+                    <p class="text-blue-400 font-mono animate-pulse">QWEN 32B IS SYNTHESIZING...</p>
                 </div>
             </div>
 
-            <div class="p-6 border-t border-white/5 bg-black/20">
-                <div id="file-preview" class="hidden flex items-center gap-3 mb-4 bg-blue-500/10 p-3 rounded-xl border border-blue-500/20">
-                    <i class="fas fa-file-code text-blue-400"></i>
-                    <span id="file-name" class="flex-1 text-xs font-mono truncate">filename.js</span>
-                    <button id="btn-remove-file" class="text-red-400 hover:text-red-300"><i class="fas fa-times"></i></button>
+            <div class="p-6 bg-slate-900/50 border-t border-white/5">
+                <div id="file-preview" class="hidden flex items-center gap-3 mb-4 bg-blue-500/10 p-3 rounded-xl border border-blue-500/20 text-xs">
+                    <i class="fas fa-code text-blue-400"></i>
+                    <span id="file-name" class="flex-1 font-mono truncate">file.js</span>
+                    <button id="btn-remove-file" class="text-red-400"><i class="fas fa-trash"></i></button>
                 </div>
-
                 <div class="flex items-center gap-4">
-                    <button id="btn-upload" class="w-12 h-12 rounded-xl glass hover:bg-white/5 transition flex items-center justify-center text-xl">
-                        <i class="fas fa-plus"></i>
-                    </button>
+                    <button id="btn-upload" class="w-14 h-14 rounded-2xl glass hover:text-blue-400 transition flex items-center justify-center"><i class="fas fa-paperclip text-xl"></i></button>
                     <input type="file" id="file-input" class="hidden">
-                    <input id="instruction-input" type="text" placeholder="Special instructions (optional)..." class="flex-1 bg-black/40 border border-white/10 rounded-xl px-6 py-4 outline-none focus:border-blue-500 font-mono text-sm">
-                    <button id="btn-generate" class="h-12 px-8 bg-blue-600 hover:bg-blue-700 rounded-xl font-bold shadow-lg shadow-blue-600/20 transition">
-                        GENERATE
-                    </button>
+                    <input id="instruction-input" type="text" placeholder="Custom instructions for AI..." class="flex-1 bg-black/40 border border-white/10 rounded-2xl px-6 py-4 outline-none focus:border-blue-500 font-mono">
+                    <button id="btn-generate" class="h-14 px-10 bg-blue-600 hover:bg-blue-700 rounded-2xl font-black shadow-xl shadow-blue-600/20 transition">GENERATE</button>
                 </div>
             </div>
         </main>
     </div>
-
     <script type="module" src="main.js"></script>
 </body>
 </html>
