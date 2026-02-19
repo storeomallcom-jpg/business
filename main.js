@@ -8,7 +8,6 @@ const client = supabase.createClient(DB_URL, DB_KEY);
 let user = null;
 let selectedFile = null;
 
-// USDT Contracts
 const USDT_CONTRACTS = {
     polygon: '0xc2132D05D31c914a87C6611C10748AEb04B58e8F',
     bsc: '0x55d398326f99059fF775485246999027B3197955'
@@ -16,15 +15,13 @@ const USDT_CONTRACTS = {
 
 // ========== AI ENGINE ==========
 async function generateReadme() {
-    if (!selectedFile) return alert("Please upload a file first.");
-    if (!user) return alert("Please login.");
+    if (!selectedFile) return alert("Upload code first!");
+    if (!user) return alert("Login required!");
 
-    // التحقق من الرصيد
     const { data: profile } = await client.from('profiles').select('credits').eq('id', user.id).single();
-    if (!profile || profile.credits < 0.50) return alert("Insufficient Balance ($0.50 required)");
+    if (!profile || parseFloat(profile.credits) < 0.50) return alert("Insufficient Balance ($0.50 required)");
 
     const loading = document.getElementById('loading-indicator');
-    const chatDisplay = document.getElementById('chat-messages');
     loading.classList.remove('hidden');
 
     try {
@@ -33,126 +30,126 @@ async function generateReadme() {
 
         const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
             method: "POST",
-            headers: {
-                "Authorization": `Bearer ${GROQ_KEY}`,
-                "Content-Type": "application/json"
-            },
+            headers: { "Authorization": `Bearer ${GROQ_KEY}`, "Content-Type": "application/json" },
             body: JSON.stringify({
-                "model": "qwen-qwq-32b",
+                "model": "qwen-qwq-32b", // هذا الموديل متوفر ومستقر في Groq
                 "messages": [
-                    { "role": "system", "content": "You are a Senior Tech Writer. Generate a masterpiece README.md with professional emojis, tables, and deep technical logic explanation." },
-                    { "role": "user", "content": `Instructions: ${instructions}\n\nCode:\n${fileContent.substring(0, 8000)}` }
-                ]
+                    { "role": "system", "content": "Expert Technical Writer. Output raw Markdown only." },
+                    { "role": "user", "content": `Instructions: ${instructions}\n\nCode Analysis:\n${fileContent.substring(0, 7000)}` }
+                ],
+                "temperature": 0.6
             })
         });
 
         const result = await response.json();
+        
+        // إصلاح خطأ "Cannot read properties of undefined (reading '0')"
+        if (!result.choices || result.choices.length === 0) {
+            throw new Error(result.error?.message || "AI Error: Invalid response from Groq");
+        }
+
         const readme = result.choices[0].message.content;
 
         // خصم الرصيد
-        const newBalance = profile.credits - 0.50;
+        const newBalance = parseFloat(profile.credits) - 0.50;
         await client.from('profiles').update({ credits: newBalance }).eq('id', user.id);
         document.getElementById('balance').innerText = newBalance.toFixed(2);
 
-        chatDisplay.innerHTML = `
-            <div class="glass p-6 rounded-2xl border border-blue-500/20">
-                <pre class="text-xs text-green-400 overflow-x-auto whitespace-pre-wrap">${readme}</pre>
-                <button id="btn-download" class="mt-4 w-full bg-blue-600 p-2 rounded-lg text-xs font-bold">DOWNLOAD .MD</button>
-            </div>
-        `;
-
-        document.getElementById('btn-download').onclick = () => {
-            const blob = new Blob([readme], { type: 'text/markdown' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url; a.download = "README.md"; a.click();
-        };
+        renderOutput(readme);
 
     } catch (err) {
-        alert("Generation failed: " + err.message);
+        alert("CRITICAL ERROR: " + err.message);
     } finally {
         loading.classList.add('hidden');
     }
 }
 
+function renderOutput(readme) {
+    const chatDisplay = document.getElementById('chat-messages');
+    chatDisplay.innerHTML = `
+        <div class="glass p-8 rounded-3xl border border-blue-500/20">
+            <div class="flex justify-between mb-4">
+                <span class="text-[10px] font-mono text-blue-400">SYNTHESIS COMPLETE</span>
+                <button id="btn-download" class="text-blue-500 hover:text-white transition"><i class="fas fa-download"></i></button>
+            </div>
+            <pre class="text-xs text-blue-100 overflow-x-auto whitespace-pre-wrap font-mono leading-relaxed">${readme}</pre>
+        </div>`;
+    
+    document.getElementById('btn-download').onclick = () => {
+        const blob = new Blob([readme], { type: 'text/markdown' });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob); a.download = "README.md"; a.click();
+    };
+}
+
 // ========== WEB3 PAYMENT (FIXED) ==========
 async function buyCredits() {
-    if (!window.ethereum) return alert("Please install MetaMask.");
+    if (!window.ethereum) return alert("Install MetaMask!");
     
     try {
         const network = document.getElementById('crypto-network').value;
-        const chainId = network === 'bsc' ? '0x38' : '0x89'; // 56 for BSC, 137 for Polygon
+        const chainId = network === 'bsc' ? '0x38' : '0x89';
         
-        // التبديل للشبكة الصحيحة
-        await window.ethereum.request({
-            method: 'wallet_switchEthereumChain',
-            params: [{ chainId }],
-        });
+        await window.ethereum.request({ method: 'wallet_switchEthereumChain', params: [{ chainId }] });
 
         const provider = new ethers.BrowserProvider(window.ethereum);
         const signer = await provider.getSigner();
-        const userAddress = await signer.getAddress();
+        const address = await signer.getAddress();
         
-        document.getElementById('wallet-status').innerText = `Wallet: ${userAddress.substring(0,6)}...`;
-
         const contract = new ethers.Contract(USDT_CONTRACTS[network], [
             "function transfer(address to, uint amount) returns (bool)",
-            "function decimals() view returns (uint8)"
+            "function decimals() view returns (uint8)",
+            "function balanceOf(address account) view returns (uint256)"
         ], signer);
 
         const decimals = await contract.decimals();
-        const amount = ethers.parseUnits("5.0", decimals); // شراء بـ 5 دولار
+        const amount = ethers.parseUnits("5.0", decimals);
+
+        // فحص الرصيد قبل الإرسال لمنع خطأ Exceeds Balance
+        const balance = await contract.balanceOf(address);
+        if (balance < amount) {
+            return alert(`Insufficient USDT! You have ${ethers.formatUnits(balance, decimals)} but need 5.0`);
+        }
 
         const tx = await contract.transfer(RECEIVER_WALLET, amount);
-        alert("Transaction sent! Waiting for confirmation...");
+        document.getElementById('wallet-status').innerText = "Confirming...";
         
-        const receipt = await tx.wait(); // انتظار التأكيد الحقيقي
+        const receipt = await tx.wait();
 
         if (receipt.status === 1) {
             const { data } = await client.from('profiles').select('credits').eq('id', user.id).single();
-            const updatedCredits = (parseFloat(data.credits) || 0) + 10.0; // إضافة 10 دولار رصيد
-            await client.from('profiles').update({ credits: updatedCredits }).eq('id', user.id);
-            document.getElementById('balance').innerText = updatedCredits.toFixed(2);
-            alert("Payment successful! Credits added.");
+            const updated = (parseFloat(data.credits) || 0) + 10.0;
+            await client.from('profiles').update({ credits: updated }).eq('id', user.id);
+            document.getElementById('balance').innerText = updated.toFixed(2);
+            alert("SUCCESS: 10.00 Credits added!");
         }
-
     } catch (err) {
-        console.error(err);
-        alert("Payment Error: " + (err.reason || err.message));
+        alert("PAYMENT FAILED: " + (err.reason || err.message));
     }
 }
 
-// ========== AUTH & INIT ==========
+// ========== AUTH & BOOTSTRAP ==========
 document.getElementById('btn-signin').onclick = async () => {
-    const email = document.getElementById('email').value;
-    const password = document.getElementById('password').value;
-    const { data, error } = await client.auth.signInWithPassword({ email, password });
+    const e = document.getElementById('email').value, p = document.getElementById('password').value;
+    const { data, error } = await client.auth.signInWithPassword({ email: e, password: p });
     if (error) return alert(error.message);
-    user = data.user;
-    initDashboard();
+    user = data.user; setupUI();
 };
 
 document.getElementById('btn-signup').onclick = async () => {
-    const email = document.getElementById('email').value;
-    const password = document.getElementById('password').value;
-    const { error } = await client.auth.signUp({ email, password });
-    if (error) return alert(error.message);
-    alert("Check email to confirm!");
+    const e = document.getElementById('email').value, p = document.getElementById('password').value;
+    const { error } = await client.auth.signUp({ email: e, password: p });
+    alert(error ? error.message : "Verification email sent!");
 };
 
-document.getElementById('btn-signout').onclick = () => {
-    client.auth.signOut();
-    location.reload();
-};
-
-async function initDashboard() {
+async function setupUI() {
     document.getElementById('auth-screen').classList.add('hidden');
     document.getElementById('dashboard-screen').classList.remove('hidden');
     const { data } = await client.from('profiles').select('credits').eq('id', user.id).single();
-    if (data) document.getElementById('balance').innerText = data.credits.toFixed(2);
+    if (data) document.getElementById('balance').innerText = parseFloat(data.credits).toFixed(2);
 }
 
-// File Handlers
+document.getElementById('btn-signout').onclick = () => { client.auth.signOut(); location.reload(); };
 document.getElementById('btn-upload').onclick = () => document.getElementById('file-input').click();
 document.getElementById('file-input').onchange = (e) => {
     selectedFile = e.target.files[0];
@@ -170,7 +167,4 @@ document.getElementById('btn-remove-file').onclick = () => {
 document.getElementById('btn-generate').onclick = generateReadme;
 document.getElementById('btn-topup').onclick = buyCredits;
 
-// Check Session
-client.auth.getSession().then(({ data: { session } }) => {
-    if (session) { user = session.user; initDashboard(); }
-});
+client.auth.getSession().then(({ data: { session } }) => { if (session) { user = session.user; setupUI(); } });
