@@ -1,18 +1,10 @@
-/* ==========================================================
-   DS // AUTO-DOC ENGINE — main.js  (complete rewrite)
-   Wrapped in an IIFE to prevent ALL variable conflicts with
-   CDN globals (window.supabase, window.ethers, etc.)
-   window.* assignments at the bottom expose functions to HTML.
-   ========================================================== */
-
 (function () {
 
-  // ── CONFIG ────────────────────────────────────────────────
   var CFG = {
-    sbUrl:        "https://kutmygkodxtfbtdtwqef.supabase.co",
-    sbKey:        "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt1dG15Z2tvZHh0ZmJ0ZHR3cWVmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzEyOTY4MzQsImV4cCI6MjA4Njg3MjgzNH0.LDd6RFbjSjF6QYqi__f7zK1oI8Ze7sa1Vv-1t2TLtkE", // ← your anon key
+    sbUrl:        "https://xtgttdwovdgsqvdwmvwi.supabase.co",
+    sbKey:        "PASTE_YOUR_SUPABASE_ANON_KEY_HERE",
     groqKey:      "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",
-    groqModel:    "qwen/qwen3-32b",
+    groqModel:    "qwen-2.5-32b",
     receiver:     "0xfF82D591F726eF56313EF958Bb7d7D85866C4E8B",
     costPerDoc:   0.50,
     topupCredits: 10,
@@ -44,7 +36,7 @@
   ];
 
   // ── STATE ─────────────────────────────────────────────────
-  var db           = null;   // Supabase client (NOT named 'supabase' — avoids CDN clash)
+  var db           = null;
   var currentUser  = null;
   var selectedFile = null;
   var ethProvider  = null;
@@ -126,7 +118,7 @@
   function handleSignUp() {
     var em = val("signup-email");
     var pw = val("signup-password");
-    if (!em || !pw)   return showToast("Email and password required.", "error");
+    if (!em || !pw)    return showToast("Email and password required.", "error");
     if (pw.length < 6) return showToast("Password needs 6+ characters.", "error");
 
     setLoading(true, "Creating your account...");
@@ -178,11 +170,16 @@
 
   function ensureProfile() {
     if (!currentUser) return Promise.resolve();
-    return db.from("profiles").select("id").eq("id", currentUser.id).maybeSingle()
+    return db.from("profiles")
+      .select("id")
+      .eq("id", currentUser.id)
+      .maybeSingle()
       .then(function (r) {
         if (r.error || !r.data) {
           return db.from("profiles").insert([{
-            id: currentUser.id, email: currentUser.email, credits: 10
+            id:      currentUser.id,
+            email:   currentUser.email,
+            credits: Number(10),
           }]);
         }
       });
@@ -191,7 +188,10 @@
   // ── BALANCE ───────────────────────────────────────────────
   function updateBalanceDisplay() {
     if (!currentUser) return;
-    db.from("profiles").select("credits").eq("id", currentUser.id).single()
+    db.from("profiles")
+      .select("credits")
+      .eq("id", currentUser.id)
+      .single()
       .then(function (r) {
         if (r.data) {
           var el = document.getElementById("balance");
@@ -201,20 +201,65 @@
   }
 
   function getCredits() {
-    return db.from("profiles").select("credits").eq("id", currentUser.id).single()
+    return db.from("profiles")
+      .select("credits")
+      .eq("id", currentUser.id)
+      .single()
       .then(function (r) {
-        if (r.error) throw new Error("Could not fetch credits.");
+        if (r.error) {
+          console.error("getCredits error:", r.error);
+          console.table(r.error);
+          throw new Error("Could not fetch credits: " + r.error.message);
+        }
         return Number(r.data.credits);
       });
   }
 
+  // ── FIX: credits sent as strict Number, id matched via currentUser.id ──
   function deductCredits(amount) {
-    return getCredits().then(function (cur) {
-      var upd = parseFloat((cur - amount).toFixed(2));
-      return db.from("profiles").update({ credits: upd }).eq("id", currentUser.id)
+    return getCredits().then(function (current) {
+      // Strict Number cast — prevents type mismatch 400 errors
+      var newBalance = Number(parseFloat((current - amount).toFixed(2)));
+
+      console.log("[deductCredits] user id:", currentUser.id, "| current:", current, "| new:", newBalance);
+
+      return db
+        .from("profiles")
+        .update({ credits: newBalance })
+        .eq("id", currentUser.id)
+        .select()          // forces Supabase to return the updated row
         .then(function (r) {
-          if (r.error) throw new Error("Failed to save credits.");
-          return upd;
+          if (r.error) {
+            console.error("[deductCredits] UPDATE failed:", r.error);
+            console.table(r.error);
+            throw new Error("Credit update failed (" + r.error.code + "): " + r.error.message);
+          }
+          console.log("[deductCredits] UPDATE success, returned row:", r.data);
+          return newBalance;
+        });
+    });
+  }
+
+  // same pattern for topup inside payWithUSDT
+  function addCredits(amount) {
+    return getCredits().then(function (current) {
+      var newBalance = Number(parseFloat((current + amount).toFixed(2)));
+
+      console.log("[addCredits] user id:", currentUser.id, "| current:", current, "| new:", newBalance);
+
+      return db
+        .from("profiles")
+        .update({ credits: newBalance })
+        .eq("id", currentUser.id)
+        .select()
+        .then(function (r) {
+          if (r.error) {
+            console.error("[addCredits] UPDATE failed:", r.error);
+            console.table(r.error);
+            throw new Error("Credit update failed (" + r.error.code + "): " + r.error.message);
+          }
+          console.log("[addCredits] UPDATE success, returned row:", r.data);
+          return newBalance;
         });
     });
   }
@@ -245,16 +290,24 @@
           "  🛠 Tech Stack (Markdown table: Technology | Version | Purpose),",
           "  📡 API Reference (if applicable), 🤝 Contributing, 📄 License.",
           "- Explain the architecture deeply, as a Senior Engineer would.",
-          "- Output ONLY raw Markdown — no preamble, no wrapper code fences."
+          "- Output ONLY raw Markdown — no preamble, no wrapper code fences.",
         ].join("\n");
         var usr = (instr ? "Special Instructions: " + instr + "\n\n" : "")
           + "Filename: " + selectedFile.name + "\n\nCode:\n```\n" + snippet + "\n```";
 
         return fetch("https://api.groq.com/openai/v1/chat/completions", {
           method: "POST",
-          headers: { "Content-Type": "application/json", "Authorization": "Bearer " + CFG.groqKey },
-          body: JSON.stringify({ model: CFG.groqModel, temperature: 0.6, max_tokens: 4096,
-            messages: [{ role: "system", content: sys }, { role: "user", content: usr }] }),
+          headers: {
+            "Content-Type":  "application/json",
+            "Authorization": "Bearer " + CFG.groqKey,
+          },
+          body: JSON.stringify({
+            model: CFG.groqModel, temperature: 0.6, max_tokens: 4096,
+            messages: [
+              { role: "system", content: sys },
+              { role: "user",   content: usr },
+            ],
+          }),
         });
       })
       .then(function (res) {
@@ -264,19 +317,21 @@
         return res.json();
       })
       .then(function (data) {
-        // safe traversal — avoids "cannot read properties of undefined"
         var text = data && data.choices && data.choices[0]
           && data.choices[0].message && data.choices[0].message.content;
         if (!text) throw new Error("AI returned an empty response. Please try again.");
 
-        return deductCredits(CFG.costPerDoc).then(function (newCredits) {
+        return deductCredits(CFG.costPerDoc).then(function (newBalance) {
           var el = document.getElementById("balance");
-          if (el) el.textContent = newCredits.toFixed(2);
-          // fire-and-forget log
+          if (el) el.textContent = Number(newBalance).toFixed(2);
+
           db.from("transactions").insert([{
-            user_id: currentUser.id, type: "debit",
-            amount: CFG.costPerDoc, description: "README for: " + selectedFile.name
+            user_id:     currentUser.id,
+            type:        "debit",
+            amount:      Number(CFG.costPerDoc),
+            description: "README for: " + selectedFile.name,
           }]);
+
           renderResult(text, selectedFile.name);
           showToast("README generated! $" + CFG.costPerDoc + " deducted.", "success");
         });
@@ -301,10 +356,8 @@
     if (!raw) return "";
     var md = raw.replace(/^(Certainly[!,.]?|Here is[^:]*:|Sure[!,.]?|I['']ve generated)[^\n]*\n+/gi,"").trim();
 
-    // fenced code blocks
     md = md.replace(/```[\w]*\n?([\s\S]*?)```/g, function(_, c){ return "<pre>" + esc(c.trim()) + "</pre>"; });
 
-    // tables
     md = md.replace(/^\|(.+)\|\s*\n\|[\s\-|:]+\|\s*\n((?:\|.+\|\n?)+)/gm, function(_,h,r){
       var ths = h.split("|").filter(function(x){return x.trim();}).map(function(x){return "<th>"+x.trim()+"</th>";}).join("");
       var trs = r.trim().split("\n").map(function(row){
@@ -353,7 +406,8 @@
       var a    = document.createElement("a");
       a.href   = URL.createObjectURL(blob);
       a.download = "README.md";
-      document.body.appendChild(a); a.click();
+      document.body.appendChild(a);
+      a.click();
       setTimeout(function () { document.body.removeChild(a); URL.revokeObjectURL(a.href); }, 100);
     });
     chat.scrollTop = 0;
@@ -362,7 +416,8 @@
   function renderError(msg) {
     var chat = document.getElementById("chat-messages");
     if (!chat) return;
-    chat.innerHTML = '<div class="error-card"><strong>⚠ GENERATION FAILED</strong><p>' + esc(msg) + '</p></div>';
+    chat.innerHTML =
+      '<div class="error-card"><strong>⚠ GENERATION FAILED</strong><p>' + esc(msg) + '</p></div>';
   }
 
   function resetChatUI() {
@@ -382,7 +437,7 @@
     if (typeof window.ethers === "undefined") return showToast("ethers.js not loaded.", "error");
     if (!window.ethereum) return showToast("MetaMask not detected.", "error");
 
-    var topupBtn  = document.getElementById("topup-btn");
+    var topupBtn   = document.getElementById("topup-btn");
     var walletAddr = null;
 
     if (topupBtn) topupBtn.disabled = true;
@@ -410,7 +465,6 @@
         return switchOrAddChain(net).then(function () { return { net: net, netKey: netKey }; });
       })
       .then(function (ctx) {
-        // re-init after chain switch — critical for ethers v6
         ethProvider = new ethers.BrowserProvider(window.ethereum);
         return ethProvider.getSigner().then(function (s) { ethSigner = s; return ctx; });
       })
@@ -434,23 +488,20 @@
       })
       .then(function (ctx) {
         if (ctx.receipt.status !== 1) throw new Error("Transaction reverted on-chain.");
-        return getCredits().then(function (cur) {
-          var nxt = parseFloat((cur + CFG.topupCredits).toFixed(2));
-          return db.from("profiles").update({ credits: nxt }).eq("id", currentUser.id)
-            .then(function (r) {
-              if (r.error) throw new Error("Credit update failed. TX: " + ctx.receipt.hash);
-              db.from("transactions").insert([{
-                user_id: currentUser.id, type: "topup",
-                amount: CFG.topupCredits,
-                description: "USDT top-up via " + ctx.netKey,
-                tx_hash: ctx.receipt.hash,
-              }]);
-              var el = document.getElementById("balance");
-              if (el) el.textContent = nxt.toFixed(2);
-              var badge = document.getElementById("wallet-badge");
-              if (badge) badge.textContent = walletAddr.slice(0,6)+"..."+walletAddr.slice(-4)+" ✓";
-              showToast("Payment confirmed! +" + CFG.topupCredits + " credits.", "success");
-            });
+
+        return addCredits(CFG.topupCredits).then(function (newBalance) {
+          db.from("transactions").insert([{
+            user_id:     currentUser.id,
+            type:        "topup",
+            amount:      Number(CFG.topupCredits),
+            description: "USDT top-up via " + ctx.netKey,
+            tx_hash:     ctx.receipt.hash,
+          }]);
+          var el = document.getElementById("balance");
+          if (el) el.textContent = Number(newBalance).toFixed(2);
+          var badge = document.getElementById("wallet-badge");
+          if (badge) badge.textContent = walletAddr.slice(0,6)+"..."+walletAddr.slice(-4)+" ✓";
+          showToast("Payment confirmed! +" + CFG.topupCredits + " credits.", "success");
         });
       })
       .catch(function (e) {
@@ -507,7 +558,7 @@
     }, ms || 4000);
   }
 
-  // ── EXPOSE TO WINDOW (required for HTML onclick= attributes) ──
+  // ── EXPOSE TO window ──────────────────────────────────────
   window.showScreen     = showScreen;
   window.showAuth       = showAuth;
   window.toggleAuthMode = toggleAuthMode;
@@ -517,4 +568,4 @@
   window.payWithUSDT    = payWithUSDT;
   window.generateReadme = generateReadme;
 
-}()); // end IIFE — nothing leaks to global scope
+}());
