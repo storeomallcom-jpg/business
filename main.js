@@ -1,7 +1,7 @@
 (function () {
 
   var CFG = {
-    sbUrl:        "https://xtgttdwovdgsqvdwmvwi.supabase.co",
+    sbUrl:        "https://kutmygkodxtfbtdtwqef.supabase.co",
     sbKey:        "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt1dG15Z2tvZHh0ZmJ0ZHR3cWVmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzEyOTY4MzQsImV4cCI6MjA4Njg3MjgzNH0.LDd6RFbjSjF6QYqi__f7zK1oI8Ze7sa1Vv-1t2TLtkE",
     groqKey:      "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",
     groqModel:    "qwen/qwen3-32b",
