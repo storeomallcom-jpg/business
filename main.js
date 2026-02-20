@@ -10,9 +10,10 @@
 // ============================================================
 const CONFIG = {
   supabaseUrl:    "https://xtgttdwovdgsqvdwmvwi.supabase.co",
-  supabaseAnonKey:"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh0Z3R0ZHdvdmRnc3F2ZHdtdndpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MTYzODQwMDAsImV4cCI6MjAzMTk2MDAwMH0.placeholder",
+  // ⚠️  PASTE YOUR ACTUAL SUPABASE ANON KEY BELOW:
+  supabaseAnonKey:"PASTE_YOUR_SUPABASE_ANON_KEY_HERE",
   groqApiKey:     "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",
-  groqModel:      "qwen-2.5-32b",
+  groqModel:      "qwen-2.5-32b",  // Groq model id
   receiverWallet: "0xfF82D591F726eF56313EF958Bb7d7D85866C4E8B",
   creditCostPerDoc: 0.50,
   topupCreditAmount: 10,
@@ -49,7 +50,7 @@ const ERC20_ABI = [
 // ============================================================
 // STATE
 // ============================================================
-let supabase = null;
+let supabaseClient = null;   // ← avoids conflict with window.supabase CDN global
 let currentUser = null;
 let selectedFile = null;
 let ethersProvider = null;
@@ -60,10 +61,10 @@ let ethersSigner = null;
 // ============================================================
 document.addEventListener("DOMContentLoaded", () => {
   // Init Supabase
-  supabase = window.supabase.createClient(CONFIG.supabaseUrl, CONFIG.supabaseAnonKey);
+  supabaseClient = window.supabase.createClient(CONFIG.supabaseUrl, CONFIG.supabaseAnonKey);
 
   // Restore session
-  supabase.auth.getSession().then(({ data: { session } }) => {
+  supabaseClient.auth.getSession().then(({ data: { session } }) => {
     if (session?.user) {
       currentUser = session.user;
       ensureProfile().then(() => showScreen("dashboard"));
@@ -73,7 +74,7 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   // Listen for auth changes
-  supabase.auth.onAuthStateChange((_event, session) => {
+  supabaseClient.auth.onAuthStateChange((_event, session) => {
     currentUser = session?.user ?? null;
   });
 
@@ -146,7 +147,7 @@ async function handleSignUp() {
 
   setLoading(true, "Creating your account...");
   try {
-    const { data, error } = await supabase.auth.signUp({ email, password });
+    const { data, error } = await supabaseClientClient.auth.signUp({ email, password });
     if (error) throw error;
 
     if (data.user) {
@@ -173,7 +174,7 @@ async function handleSignIn() {
 
   setLoading(true, "Logging in...");
   try {
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    const { data, error } = await supabaseClientClient.auth.signInWithPassword({ email, password });
     if (error) throw error;
 
     currentUser = data.user;
@@ -188,7 +189,7 @@ async function handleSignIn() {
 }
 
 async function handleSignOut() {
-  await supabase.auth.signOut();
+  await supabaseClient.auth.signOut();
   currentUser = null;
   selectedFile = null;
   ethersProvider = null;
@@ -202,7 +203,7 @@ async function handleSignOut() {
 // Ensure a profiles row exists (handles edge cases where trigger didn't fire)
 async function ensureProfile() {
   if (!currentUser) return;
-  const { data, error } = await supabase
+  const { data, error } = await supabaseClientClient
     .from("profiles")
     .select("id")
     .eq("id", currentUser.id)
@@ -210,7 +211,7 @@ async function ensureProfile() {
 
   if (error || !data) {
     // Insert with welcome credits
-    await supabase.from("profiles").insert([{
+    await supabaseClient.from("profiles").insert([{
       id:      currentUser.id,
       email:   currentUser.email,
       credits: 10,
@@ -224,7 +225,7 @@ async function ensureProfile() {
 async function updateBalanceDisplay() {
   if (!currentUser) return;
   try {
-    const { data } = await supabase
+    const { data } = await supabaseClientClient
       .from("profiles")
       .select("credits")
       .eq("id", currentUser.id)
@@ -237,7 +238,7 @@ async function updateBalanceDisplay() {
 }
 
 async function getCredits() {
-  const { data, error } = await supabase
+  const { data, error } = await supabaseClientClient
     .from("profiles")
     .select("credits")
     .eq("id", currentUser.id)
@@ -249,7 +250,7 @@ async function getCredits() {
 async function deductCredits(amount) {
   const current = await getCredits();
   const updated  = parseFloat((current - amount).toFixed(2));
-  const { error } = await supabase
+  const { error } = await supabaseClientClient
     .from("profiles")
     .update({ credits: updated })
     .eq("id", currentUser.id);
@@ -329,7 +330,7 @@ Requirements:
     document.getElementById("balance").textContent = newCredits.toFixed(2);
 
     // Log transaction
-    supabase.from("transactions").insert([{
+    supabaseClient.from("transactions").insert([{
       user_id:     currentUser.id,
       type:        "debit",
       amount:      CONFIG.creditCostPerDoc,
@@ -532,7 +533,7 @@ async function payWithUSDT() {
     const currentCredits = await getCredits();
     const newCredits     = parseFloat((currentCredits + CONFIG.topupCreditAmount).toFixed(2));
 
-    const { error: updateError } = await supabase
+    const { error: updateError } = await supabaseClientClient
       .from("profiles")
       .update({ credits: newCredits })
       .eq("id", currentUser.id);
@@ -540,7 +541,7 @@ async function payWithUSDT() {
     if (updateError) throw new Error("Payment confirmed but credit update failed. Contact support with tx: " + receipt.hash);
 
     // Log transaction
-    await supabase.from("transactions").insert([{
+    await supabaseClient.from("transactions").insert([{
       user_id:     currentUser.id,
       type:        "topup",
       amount:      CONFIG.topupCreditAmount,
