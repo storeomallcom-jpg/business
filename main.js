@@ -9,8 +9,8 @@
 
   // ── CONFIG ────────────────────────────────────────────────
   var CFG = {
-    sbUrl:        "https://xtgttdwovdgsqvdwmvwi.supabase.co",
-    sbKey:        "PASTE_YOUR_SUPABASE_ANON_KEY_HERE", // ← your anon key
+    sbUrl:        "https://kutmygkodxtfbtdtwqef.supabase.co",
+    sbKey:        "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt1dG15Z2tvZHh0ZmJ0ZHR3cWVmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzEyOTY4MzQsImV4cCI6MjA4Njg3MjgzNH0.LDd6RFbjSjF6QYqi__f7zK1oI8Ze7sa1Vv-1t2TLtkE", // ← your anon key
     groqKey:      "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",
     groqModel:    "qwen-2.5-32b",
     receiver:     "0xfF82D591F726eF56313EF958Bb7d7D85866C4E8B",
