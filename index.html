@@ -1,91 +1,712 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DS // AUTO-DOC ENGINE</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.7.0/ethers.umd.min.js"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-    <style>
-        body { background: radial-gradient(circle at center, #0f172a 0%, #020617 100%); }
-        .glass { background: rgba(30, 41, 59, 0.5); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.1); }
-    </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DS // AUTO-DOC ENGINE</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Syne:wght@400;700;800;900&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+
+  <style>
+    /* ============ RESET & TOKENS ============ */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:       #040810;
+      --bg2:      #080f1e;
+      --card:     rgba(12, 22, 45, 0.75);
+      --border:   rgba(0, 195, 255, 0.12);
+      --border2:  rgba(0, 195, 255, 0.25);
+      --cyan:     #00c3ff;
+      --cyan2:    #0085cc;
+      --green:    #00ff88;
+      --red:      #ff4466;
+      --txt:      #e2eaf5;
+      --muted:    #5a7299;
+      --mono:     'Space Mono', monospace;
+      --sans:     'Syne', sans-serif;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: var(--sans);
+      background: var(--bg);
+      color: var(--txt);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* ============ SCROLLBAR ============ */
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-track { background: var(--bg); }
+    ::-webkit-scrollbar-thumb { background: var(--cyan2); border-radius: 2px; }
+
+    /* ============ BG EFFECTS ============ */
+    .noise-overlay {
+      position: fixed; inset: 0; pointer-events: none; z-index: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+      background-size: 200px;
+      opacity: 0.5;
+    }
+
+    .grid-bg {
+      position: fixed; inset: 0; pointer-events: none; z-index: 0;
+      background-image:
+        linear-gradient(rgba(0,195,255,0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0,195,255,0.03) 1px, transparent 1px);
+      background-size: 60px 60px;
+    }
+
+    .glow-orb {
+      position: fixed; border-radius: 50%;
+      filter: blur(120px); pointer-events: none; z-index: 0;
+    }
+    .orb1 { width: 600px; height: 600px; top: -200px; left: -200px; background: rgba(0,195,255,0.06); }
+    .orb2 { width: 500px; height: 500px; bottom: -150px; right: -150px; background: rgba(0,133,255,0.07); }
+
+    /* ============ SHARED UTILS ============ */
+    .glass {
+      background: var(--card);
+      backdrop-filter: blur(16px);
+      border: 1px solid var(--border);
+    }
+
+    .btn-primary {
+      display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+      background: var(--cyan); color: #000; font-family: var(--mono);
+      font-weight: 700; font-size: 0.8rem; letter-spacing: 0.1em; text-transform: uppercase;
+      padding: 14px 28px; border-radius: 8px; border: none; cursor: pointer;
+      transition: all 0.2s; position: relative; overflow: hidden;
+    }
+    .btn-primary:hover { background: #33d4ff; transform: translateY(-2px); box-shadow: 0 8px 30px rgba(0,195,255,0.3); }
+    .btn-primary:active { transform: translateY(0); }
+
+    .btn-ghost {
+      display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+      background: transparent; color: var(--cyan); font-family: var(--mono);
+      font-weight: 700; font-size: 0.75rem; letter-spacing: 0.1em; text-transform: uppercase;
+      padding: 13px 26px; border-radius: 8px; border: 1px solid var(--border2); cursor: pointer;
+      transition: all 0.2s;
+    }
+    .btn-ghost:hover { background: rgba(0,195,255,0.08); box-shadow: 0 0 20px rgba(0,195,255,0.1); }
+
+    .tag {
+      font-family: var(--mono); font-size: 0.65rem; letter-spacing: 0.15em;
+      text-transform: uppercase; color: var(--cyan);
+      background: rgba(0,195,255,0.08); border: 1px solid var(--border2);
+      padding: 4px 10px; border-radius: 4px; display: inline-block;
+    }
+
+    /* ============ SCREENS ============ */
+    #landing-screen, #auth-screen, #dashboard-screen {
+      position: relative; z-index: 10;
+    }
+    .screen-hidden { display: none !important; }
+
+    /* ============ NAV ============ */
+    nav {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+      padding: 16px 24px;
+      background: rgba(4, 8, 16, 0.85);
+      backdrop-filter: blur(20px);
+      border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .nav-logo { font-family: var(--mono); font-size: 1rem; font-weight: 700; color: var(--cyan); letter-spacing: 0.1em; }
+    .nav-logo span { color: var(--txt); }
+    .nav-actions { display: flex; gap: 12px; align-items: center; }
+
+    /* ============ HERO ============ */
+    #landing-screen { min-height: 100vh; padding-top: 80px; }
+
+    .hero {
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      text-align: center; padding: 80px 24px 60px;
+      min-height: calc(100vh - 80px);
+    }
+
+    .hero-tag { margin-bottom: 32px; }
+
+    .hero-title {
+      font-size: clamp(2.8rem, 8vw, 6.5rem);
+      font-weight: 900;
+      line-height: 0.95;
+      letter-spacing: -0.03em;
+      margin-bottom: 24px;
+      color: var(--txt);
+    }
+    .hero-title .accent { color: var(--cyan); text-shadow: 0 0 40px rgba(0,195,255,0.4); }
+    .hero-title .line2 { display: block; color: var(--muted); font-size: 0.85em; }
+
+    .hero-sub {
+      font-family: var(--mono); font-size: 0.9rem; color: var(--muted);
+      max-width: 500px; line-height: 1.8; margin-bottom: 48px;
+    }
+
+    .hero-cta { display: flex; gap: 16px; flex-wrap: wrap; justify-content: center; }
+
+    .hero-stats {
+      display: flex; gap: 40px; margin-top: 80px; flex-wrap: wrap; justify-content: center;
+    }
+    .stat { text-align: center; }
+    .stat-num { font-family: var(--mono); font-size: 2rem; font-weight: 700; color: var(--cyan); display: block; }
+    .stat-label { font-family: var(--mono); font-size: 0.65rem; color: var(--muted); letter-spacing: 0.15em; text-transform: uppercase; }
+
+    /* ============ DEMO PREVIEW ============ */
+    .demo-section { padding: 60px 24px; max-width: 900px; margin: 0 auto; }
+    .demo-card {
+      border-radius: 16px; overflow: hidden;
+      border: 1px solid var(--border2);
+      box-shadow: 0 0 60px rgba(0,195,255,0.06);
+    }
+    .demo-header {
+      background: rgba(8,15,30,0.9); padding: 14px 20px;
+      display: flex; align-items: center; gap: 8px;
+      border-bottom: 1px solid var(--border);
+    }
+    .demo-dot { width: 10px; height: 10px; border-radius: 50%; }
+    .demo-body { background: rgba(4,8,16,0.95); padding: 28px; font-family: var(--mono); font-size: 0.78rem; line-height: 2; }
+    .demo-body .kw { color: var(--cyan); }
+    .demo-body .fn { color: #ff9a3c; }
+    .demo-body .str { color: var(--green); }
+    .demo-body .cm { color: var(--muted); }
+    .demo-body .cursor {
+      display: inline-block; width: 2px; height: 1em; background: var(--cyan);
+      animation: blink 1s step-end infinite; vertical-align: text-bottom;
+    }
+    @keyframes blink { 50% { opacity: 0; } }
+
+    .arrow-down { text-align: center; padding: 20px; color: var(--muted); font-size: 1.5rem; }
+    .readme-preview { padding: 28px; background: var(--card); border: 1px solid var(--border); border-radius: 16px; max-width: 900px; margin: 0 auto 80px; }
+    .readme-preview h3 { font-family: var(--mono); color: var(--cyan); font-size: 1.1rem; margin-bottom: 16px; }
+    .readme-line { height: 8px; border-radius: 4px; margin-bottom: 10px; background: rgba(255,255,255,0.06); animation: shimmer 2s infinite; }
+    @keyframes shimmer { 0%,100% { opacity: 0.4; } 50% { opacity: 0.9; } }
+    .readme-line.w-full { width: 100%; }
+    .readme-line.w-80 { width: 80%; }
+    .readme-line.w-60 { width: 60%; }
+    .readme-line.w-40 { width: 40%; }
+    .readme-line.cyan { background: rgba(0,195,255,0.2); height: 16px; width: 30%; margin-bottom: 16px; }
+
+    /* ============ FEATURES ============ */
+    .features-section { padding: 80px 24px; max-width: 1100px; margin: 0 auto; }
+    .section-header { text-align: center; margin-bottom: 60px; }
+    .section-title { font-size: clamp(1.8rem, 4vw, 3rem); font-weight: 900; margin: 12px 0; }
+    .section-sub { font-family: var(--mono); color: var(--muted); font-size: 0.85rem; }
+
+    .features-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 24px; }
+    .feature-card {
+      border-radius: 16px; padding: 32px;
+      background: var(--card); border: 1px solid var(--border);
+      transition: all 0.3s; position: relative; overflow: hidden;
+    }
+    .feature-card::before {
+      content: ''; position: absolute; inset: 0; opacity: 0;
+      background: radial-gradient(circle at 50% 0%, rgba(0,195,255,0.08), transparent 70%);
+      transition: opacity 0.3s;
+    }
+    .feature-card:hover { border-color: var(--border2); transform: translateY(-4px); box-shadow: 0 20px 40px rgba(0,0,0,0.3); }
+    .feature-card:hover::before { opacity: 1; }
+    .feature-icon { font-size: 1.8rem; margin-bottom: 16px; display: block; }
+    .feature-title { font-size: 1.1rem; font-weight: 800; margin-bottom: 10px; }
+    .feature-desc { font-family: var(--mono); font-size: 0.78rem; color: var(--muted); line-height: 1.8; }
+
+    /* ============ PRICING ============ */
+    .pricing-section { padding: 80px 24px; max-width: 700px; margin: 0 auto; }
+    .pricing-card {
+      border-radius: 24px; padding: 48px;
+      background: var(--card); border: 1px solid var(--border2);
+      text-align: center; position: relative; overflow: hidden;
+      box-shadow: 0 0 80px rgba(0,195,255,0.05);
+    }
+    .pricing-card::after {
+      content: ''; position: absolute; top: -1px; left: 20%; right: 20%; height: 2px;
+      background: linear-gradient(90deg, transparent, var(--cyan), transparent);
+    }
+    .pricing-price { font-family: var(--mono); font-size: 3.5rem; font-weight: 700; color: var(--cyan); line-height: 1; margin: 24px 0 8px; }
+    .pricing-sub { font-family: var(--mono); color: var(--muted); font-size: 0.8rem; margin-bottom: 32px; }
+    .pricing-features { list-style: none; text-align: left; margin-bottom: 40px; }
+    .pricing-features li { font-family: var(--mono); font-size: 0.82rem; padding: 10px 0; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 12px; }
+    .pricing-features li:last-child { border-bottom: none; }
+    .pricing-features li .check { color: var(--green); }
+
+    /* ============ AUTH SCREEN ============ */
+    #auth-screen {
+      min-height: 100vh; display: flex; align-items: center; justify-content: center;
+      padding: 24px;
+    }
+    .auth-card { width: 100%; max-width: 420px; border-radius: 24px; padding: 48px 40px; }
+
+    .auth-logo { font-family: var(--mono); font-size: 1.2rem; font-weight: 700; color: var(--cyan); letter-spacing: 0.1em; text-align: center; margin-bottom: 40px; }
+    .auth-logo span { color: var(--txt); }
+
+    .form-group { margin-bottom: 16px; }
+    .form-input {
+      width: 100%; padding: 16px 20px;
+      background: rgba(0,0,0,0.5); border: 1px solid var(--border);
+      border-radius: 10px; color: var(--txt); font-family: var(--mono); font-size: 0.85rem;
+      outline: none; transition: border-color 0.2s;
+    }
+    .form-input:focus { border-color: var(--cyan); box-shadow: 0 0 0 3px rgba(0,195,255,0.08); }
+    .form-input::placeholder { color: var(--muted); }
+
+    .auth-divider { display: flex; align-items: center; gap: 12px; margin: 20px 0; }
+    .auth-divider::before, .auth-divider::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+    .auth-divider span { font-family: var(--mono); font-size: 0.7rem; color: var(--muted); }
+
+    .auth-switch { text-align: center; margin-top: 20px; font-family: var(--mono); font-size: 0.78rem; color: var(--muted); }
+    .auth-switch button { background: none; border: none; color: var(--cyan); cursor: pointer; font-family: var(--mono); font-size: 0.78rem; text-decoration: underline; padding: 0; }
+
+    .auth-notice {
+      background: rgba(0,255,136,0.06); border: 1px solid rgba(0,255,136,0.2);
+      border-radius: 10px; padding: 14px 16px;
+      font-family: var(--mono); font-size: 0.75rem; color: rgba(0,255,136,0.8);
+      display: flex; gap: 10px; align-items: flex-start; margin-top: 20px;
+    }
+
+    /* ============ DASHBOARD ============ */
+    #dashboard-screen {
+      min-height: 100vh; display: flex; flex-direction: column;
+      padding: 80px 0 0;
+    }
+
+    .dash-header {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+      background: rgba(4,8,16,0.92); backdrop-filter: blur(20px);
+      border-bottom: 1px solid var(--border);
+      padding: 12px 20px;
+      display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+    }
+
+    .dash-logo { font-family: var(--mono); font-size: 0.9rem; font-weight: 700; color: var(--cyan); letter-spacing: 0.08em; white-space: nowrap; }
+
+    .dash-controls { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+
+    .balance-badge {
+      background: rgba(0,195,255,0.08); border: 1px solid var(--border2);
+      border-radius: 8px; padding: 8px 16px;
+      font-family: var(--mono); font-size: 0.8rem; color: var(--cyan); white-space: nowrap;
+    }
+
+    .wallet-badge {
+      background: rgba(0,255,136,0.06); border: 1px solid rgba(0,255,136,0.2);
+      border-radius: 8px; padding: 8px 14px;
+      font-family: var(--mono); font-size: 0.7rem; color: rgba(0,255,136,0.8);
+      max-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+
+    .topup-wrap { display: flex; align-items: center; gap: 6px; }
+    .network-select {
+      background: rgba(0,0,0,0.5); border: 1px solid var(--border); color: var(--txt);
+      border-radius: 8px; padding: 8px 10px; font-family: var(--mono); font-size: 0.72rem;
+      outline: none; cursor: pointer;
+    }
+    .btn-topup {
+      background: var(--green); color: #000; font-family: var(--mono); font-weight: 700;
+      font-size: 0.72rem; letter-spacing: 0.08em; padding: 8px 14px; border-radius: 8px;
+      border: none; cursor: pointer; transition: all 0.2s; white-space: nowrap;
+    }
+    .btn-topup:hover { background: #33ffaa; box-shadow: 0 4px 20px rgba(0,255,136,0.3); }
+    .btn-topup:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    .btn-signout {
+      background: rgba(255,68,102,0.1); border: 1px solid rgba(255,68,102,0.3);
+      color: var(--red); border-radius: 8px; padding: 8px 12px; cursor: pointer;
+      transition: all 0.2s; font-size: 0.85rem;
+    }
+    .btn-signout:hover { background: rgba(255,68,102,0.2); }
+
+    /* MAIN AREA */
+    .dash-main {
+      flex: 1; display: flex; flex-direction: column;
+      max-width: 900px; width: 100%; margin: 0 auto; padding: 20px;
+    }
+
+    #chat-messages {
+      flex: 1; min-height: 300px; overflow-y: auto; padding: 10px 0 20px;
+      display: flex; flex-direction: column; gap: 16px;
+    }
+
+    .empty-state {
+      flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
+      padding: 60px 20px; text-align: center;
+    }
+    .empty-icon { font-size: 3rem; color: var(--muted); opacity: 0.3; margin-bottom: 20px; }
+    .empty-title { font-family: var(--mono); font-size: 0.85rem; color: var(--muted); line-height: 2; }
+    .empty-cost { color: var(--cyan); font-weight: 700; }
+
+    /* RESULT CARD */
+    .result-card {
+      border-radius: 16px; border: 1px solid var(--border2);
+      background: rgba(8,15,30,0.8); overflow: hidden;
+      animation: slideUp 0.4s ease-out;
+    }
+    @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+    .result-header {
+      padding: 14px 20px; background: rgba(0,195,255,0.06);
+      border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+    }
+    .result-tag { font-family: var(--mono); font-size: 0.65rem; color: var(--cyan); background: rgba(0,195,255,0.1); border: 1px solid var(--border2); padding: 4px 10px; border-radius: 4px; letter-spacing: 0.1em; }
+    .result-body { padding: 28px; }
+    .result-body h1 { font-size: 1.6rem; font-weight: 900; color: var(--cyan); margin-bottom: 20px; }
+    .result-body h2 { font-size: 1.1rem; font-weight: 800; color: #a0c4e8; margin: 24px 0 10px; border-bottom: 1px solid var(--border); padding-bottom: 6px; }
+    .result-body p { font-family: var(--mono); font-size: 0.8rem; color: var(--muted); line-height: 1.9; margin-bottom: 12px; }
+    .result-body strong { color: var(--txt); }
+    .result-body code { background: rgba(0,0,0,0.5); color: #ff9a3c; padding: 2px 6px; border-radius: 4px; font-family: var(--mono); font-size: 0.75rem; }
+    .result-body pre { background: rgba(0,0,0,0.7); border: 1px solid var(--border); border-radius: 10px; padding: 20px; overflow-x: auto; font-family: var(--mono); font-size: 0.75rem; color: var(--green); line-height: 1.8; margin: 16px 0; }
+    .result-body table { width: 100%; border-collapse: collapse; font-family: var(--mono); font-size: 0.78rem; margin: 16px 0; }
+    .result-body th { background: rgba(0,195,255,0.08); color: var(--cyan); padding: 10px 14px; text-align: left; border: 1px solid var(--border); }
+    .result-body td { padding: 8px 14px; border: 1px solid var(--border); color: var(--muted); }
+
+    .btn-download {
+      width: 100%; margin-top: 24px;
+      background: var(--cyan); color: #000;
+      font-family: var(--mono); font-weight: 700; font-size: 0.8rem; letter-spacing: 0.1em;
+      padding: 16px; border-radius: 10px; border: none; cursor: pointer;
+      transition: all 0.2s; text-transform: uppercase;
+    }
+    .btn-download:hover { background: #33d4ff; box-shadow: 0 8px 30px rgba(0,195,255,0.3); }
+
+    /* ERROR CARD */
+    .error-card {
+      border-radius: 12px; border: 1px solid rgba(255,68,102,0.3);
+      background: rgba(255,68,102,0.06); padding: 24px;
+      font-family: var(--mono); font-size: 0.82rem; color: var(--red);
+      text-align: center; animation: slideUp 0.3s ease-out;
+    }
+    .error-card p { margin-top: 8px; font-size: 0.75rem; opacity: 0.8; word-break: break-all; }
+
+    /* INPUT AREA */
+    .input-area {
+      border-radius: 16px; border: 1px solid var(--border);
+      background: rgba(8,15,30,0.8); overflow: hidden; margin-top: 12px;
+      position: sticky; bottom: 20px;
+    }
+    .file-preview {
+      display: none; align-items: center; gap: 10px;
+      padding: 10px 16px; background: rgba(0,195,255,0.05);
+      border-bottom: 1px solid var(--border); font-family: var(--mono); font-size: 0.75rem;
+    }
+    .file-preview.visible { display: flex; }
+    .file-preview-name { flex: 1; color: var(--cyan); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .btn-clear-file { background: none; border: none; color: var(--red); cursor: pointer; font-size: 0.85rem; padding: 4px; }
+
+    .input-row { display: flex; align-items: center; gap: 8px; padding: 10px 12px; }
+    .btn-upload {
+      width: 44px; height: 44px; flex-shrink: 0; border-radius: 10px;
+      background: rgba(0,195,255,0.08); border: 1px solid var(--border2);
+      color: var(--cyan); cursor: pointer; font-size: 1rem; transition: all 0.2s;
+    }
+    .btn-upload:hover { background: rgba(0,195,255,0.16); }
+
+    .msg-input {
+      flex: 1; background: transparent; border: none; outline: none;
+      font-family: var(--mono); font-size: 0.82rem; color: var(--txt);
+      padding: 10px 8px; resize: none; height: 44px; line-height: 1.4;
+    }
+    .msg-input::placeholder { color: var(--muted); }
+
+    .btn-send {
+      width: 44px; height: 44px; flex-shrink: 0; border-radius: 10px;
+      background: var(--cyan); border: none; color: #000; font-size: 1.1rem;
+      cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center;
+    }
+    .btn-send:hover { background: #33d4ff; box-shadow: 0 4px 20px rgba(0,195,255,0.3); }
+    .btn-send:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    /* LOADING */
+    .loading-overlay {
+      display: none; position: fixed; inset: 0; z-index: 200;
+      background: rgba(4,8,16,0.85); backdrop-filter: blur(8px);
+      flex-direction: column; align-items: center; justify-content: center; gap: 24px;
+    }
+    .loading-overlay.visible { display: flex; }
+    .spinner { width: 56px; height: 56px; border: 3px solid rgba(0,195,255,0.15); border-top-color: var(--cyan); border-radius: 50%; animation: spin 0.9s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .loading-text { font-family: var(--mono); font-size: 0.85rem; color: var(--cyan); letter-spacing: 0.15em; text-transform: uppercase; animation: pulse 1.5s ease-in-out infinite; }
+    @keyframes pulse { 0%,100% { opacity: 0.5; } 50% { opacity: 1; } }
+
+    /* TOAST */
+    #toast-container { position: fixed; top: 80px; right: 20px; z-index: 300; display: flex; flex-direction: column; gap: 10px; pointer-events: none; }
+    .toast {
+      background: var(--card); border: 1px solid var(--border2);
+      border-radius: 10px; padding: 14px 18px;
+      font-family: var(--mono); font-size: 0.78rem; max-width: 300px;
+      backdrop-filter: blur(16px);
+      animation: toastIn 0.3s ease-out;
+      pointer-events: all;
+    }
+    .toast.success { border-color: rgba(0,255,136,0.3); color: var(--green); }
+    .toast.error { border-color: rgba(255,68,102,0.3); color: var(--red); }
+    .toast.info { border-color: var(--border2); color: var(--cyan); }
+    @keyframes toastIn { from { opacity: 0; transform: translateX(20px); } to { opacity: 1; transform: translateX(0); } }
+
+    /* ============ FOOTER ============ */
+    .landing-footer {
+      text-align: center; padding: 40px 24px;
+      border-top: 1px solid var(--border);
+      font-family: var(--mono); font-size: 0.72rem; color: var(--muted);
+    }
+
+    /* ============ RESPONSIVE ============ */
+    @media (max-width: 640px) {
+      .nav-actions .btn-primary { padding: 10px 18px; font-size: 0.72rem; }
+      .hero { padding: 60px 20px 40px; }
+      .auth-card { padding: 36px 28px; }
+      .dash-controls { gap: 8px; }
+      .pricing-card { padding: 36px 28px; }
+    }
+
+    /* ============ ENTRANCE ANIMATIONS ============ */
+    .fade-in { opacity: 0; transform: translateY(24px); animation: fadeIn 0.7s ease-out forwards; }
+    .fade-in:nth-child(1) { animation-delay: 0.1s; }
+    .fade-in:nth-child(2) { animation-delay: 0.2s; }
+    .fade-in:nth-child(3) { animation-delay: 0.3s; }
+    .fade-in:nth-child(4) { animation-delay: 0.4s; }
+    @keyframes fadeIn { to { opacity: 1; transform: translateY(0); } }
+
+    .feature-card { opacity: 0; transform: translateY(20px); transition: opacity 0.5s, transform 0.5s; }
+    .feature-card.visible { opacity: 1; transform: translateY(0); }
+  </style>
 </head>
-<body class="text-white min-h-screen flex items-center justify-center p-4">
+<body>
 
-    <div id="auth-screen" class="glass p-10 rounded-3xl w-full max-w-md shadow-2xl">
-        <h1 class="text-4xl font-black italic text-blue-500 mb-8 tracking-tighter text-center">DS // ACCESS</h1>
-        <div class="space-y-4">
-            <input id="email" type="email" placeholder="Email" class="w-full p-4 bg-black/40 rounded-xl outline-none border border-white/5 focus:border-blue-500 transition">
-            <input id="password" type="password" placeholder="Password" class="w-full p-4 bg-black/40 rounded-xl outline-none border border-white/5 focus:border-blue-500 transition">
-            <button onclick="handleSignIn()" class="w-full bg-blue-600 hover:bg-blue-700 p-4 rounded-xl font-bold transition shadow-lg shadow-blue-600/20">Login Engine</button>
-            <button onclick="handleSignUp()" class="w-full text-gray-400 text-sm py-2">Create New Identity</button>
-        </div>
+<!-- BG EFFECTS -->
+<div class="noise-overlay"></div>
+<div class="grid-bg"></div>
+<div class="glow-orb orb1"></div>
+<div class="glow-orb orb2"></div>
+
+<!-- TOAST -->
+<div id="toast-container"></div>
+
+<!-- LOADING OVERLAY -->
+<div id="loading-overlay" class="loading-overlay">
+  <div class="spinner"></div>
+  <p class="loading-text" id="loading-text">Generating Documentation...</p>
+</div>
+
+<!-- ===================== LANDING ===================== -->
+<div id="landing-screen">
+  <nav>
+    <span class="nav-logo">DS // <span>AUTO-DOC</span></span>
+    <div class="nav-actions">
+      <button class="btn-ghost" onclick="showAuth('signin')">Login</button>
+      <button class="btn-primary" onclick="showAuth('signup')"><i class="fas fa-bolt"></i> Get Started Free</button>
+    </div>
+  </nav>
+
+  <section class="hero">
+    <div class="hero-tag fade-in"><span class="tag">⚡ AI-Powered Documentation Engine</span></div>
+    <h1 class="hero-title fade-in">
+      <span class="accent">TURN CODE</span>
+      <span class="line2">INTO DOCS IN SECONDS</span>
+    </h1>
+    <p class="hero-sub fade-in">
+      Drop your source code. Our Qwen-32B AI analyzes every line and generates a professional,
+      senior-engineer-level README.md — complete with architecture, API docs, and setup guides.
+    </p>
+    <div class="hero-cta fade-in">
+      <button class="btn-primary" onclick="showAuth('signup')"><i class="fas fa-rocket"></i> Start Free — 10 Credits</button>
+      <button class="btn-ghost" onclick="document.getElementById('features').scrollIntoView({behavior:'smooth'})">See How It Works</button>
     </div>
 
-    <div id="dashboard-screen" class="hidden w-full max-w-5xl flex flex-col h-[90vh]">
-        <header class="flex flex-wrap justify-between items-center mb-6 glass p-4 rounded-2xl gap-4">
-            <div class="flex items-center gap-4">
-                <span class="text-2xl font-black italic tracking-tighter">DS // <span class="text-blue-500">DOC</span></span>
-                <span id="wallet-status" class="text-[10px] font-mono text-blue-400 bg-blue-500/5 px-2 py-1 rounded border border-blue-500/20">Wallet: Disconnected</span>
-            </div>
-            
-            <div class="flex items-center gap-3">
-                <div class="flex items-center bg-black/40 rounded-xl p-1 border border-white/5">
-                    <select id="crypto-network" class="bg-transparent text-xs p-2 outline-none">
-                        <option value="polygon">Polygon</option>
-                        <option value="bsc">BSC</option>
-                    </select>
-                    <button onclick="payWithUSDT()" class="bg-green-600 hover:bg-green-500 px-4 py-2 rounded-lg text-xs font-bold transition">Top Up $5</button>
-                </div>
-                <div class="bg-blue-500/10 px-4 py-2 rounded-xl border border-blue-500/30">
-                    <span class="text-blue-400 font-mono font-bold">$<span id="balance">0.00</span></span>
-                </div>
-                <button onclick="handleSignOut()" class="text-red-400 p-2"><i class="fas fa-power-off"></i></button>
-            </div>
-        </header>
+    <div class="hero-stats fade-in">
+      <div class="stat"><span class="stat-num">10</span><span class="stat-label">Free Credits</span></div>
+      <div class="stat"><span class="stat-num">$0.50</span><span class="stat-label">Per README</span></div>
+      <div class="stat"><span class="stat-num">&lt;30s</span><span class="stat-label">Generation Time</span></div>
+      <div class="stat"><span class="stat-num">32B</span><span class="stat-label">Model Params</span></div>
+    </div>
+  </section>
 
-        <main class="flex-1 glass rounded-3xl overflow-hidden flex flex-col relative">
-            <div id="chat-messages" class="flex-1 overflow-y-auto p-6 space-y-4">
-                <div class="text-center mt-20 text-gray-500">
-                    <i class="fas fa-file-export text-5xl mb-4 opacity-20"></i>
-                    <p class="font-mono text-sm">Waiting for code input...<br>Cost: $0.50 per professional README</p>
-                </div>
-            </div>
-
-            <div id="loading-indicator" class="hidden absolute inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50">
-                <div class="text-center">
-                    <div class="inline-block w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mb-4"></div>
-                    <p class="font-mono text-blue-400 animate-pulse">GENERATING DOCUMENTATION...</p>
-                </div>
-            </div>
-
-            <div class="p-4 bg-slate-900/80 border-t border-white/5">
-                <div id="file-preview" class="hidden flex items-center gap-3 mb-3 bg-blue-500/10 p-2 rounded-lg border border-blue-500/20 text-xs">
-                    <i class="fas fa-code text-blue-400"></i>
-                    <span id="file-name" class="flex-1 truncate font-mono">file.js</span>
-                    <button id="clear-file-btn" class="text-red-400"><i class="fas fa-trash"></i></button>
-                </div>
-
-                <div class="flex items-center gap-3">
-                    <button id="file-upload-btn" class="w-12 h-12 rounded-full glass hover:text-blue-400 transition">
-                        <i class="fas fa-plus"></i>
-                    </button>
-                    <input type="file" id="file-input" class="hidden">
-                    
-                    <input type="text" id="message-input" placeholder="Any specific instructions? (e.g. Make it funny, or very technical)" 
-                           class="flex-1 bg-black/40 border border-white/5 rounded-2xl px-6 py-4 outline-none focus:border-blue-500 transition font-mono text-sm">
-                    
-                    <button id="send-message-btn" class="w-14 h-14 bg-blue-600 hover:bg-blue-700 rounded-2xl shadow-xl shadow-blue-600/20 transition flex items-center justify-center">
-                        <i class="fas fa-bolt text-xl"></i>
-                    </button>
-                </div>
-            </div>
-        </main>
+  <!-- DEMO PREVIEW -->
+  <div class="demo-section">
+    <div class="demo-card">
+      <div class="demo-header">
+        <div class="demo-dot" style="background:#ff5f57"></div>
+        <div class="demo-dot" style="background:#febc2e"></div>
+        <div class="demo-dot" style="background:#28c840"></div>
+        <span style="font-family:var(--mono);font-size:0.7rem;color:var(--muted);margin-left:8px">your_project.js</span>
+      </div>
+      <div class="demo-body">
+        <span class="kw">async function</span> <span class="fn">processPayment</span>(<span style="color:#c9d1d9">userId, amount</span>) {<br>
+        &nbsp;&nbsp;<span class="kw">const</span> user = <span class="kw">await</span> <span class="fn">db.findUser</span>(userId);<br>
+        &nbsp;&nbsp;<span class="kw">if</span> (!user) <span class="kw">throw new</span> <span class="fn">Error</span>(<span class="str">'User not found'</span>);<br>
+        &nbsp;&nbsp;<span class="kw">const</span> receipt = <span class="kw">await</span> <span class="fn">stripe.charge</span>({ amount, currency: <span class="str">'usd'</span> });<br>
+        &nbsp;&nbsp;<span class="kw">return</span> { success: <span class="kw">true</span>, receipt };<br>
+        }<span class="cursor"></span><br>
+        <span class="cm">// Drop your entire codebase — we handle the rest</span>
+      </div>
     </div>
 
-    <script type="module" src="main.js"></script>
+    <div class="arrow-down"><i class="fas fa-chevron-down"></i> <span style="font-family:var(--mono);font-size:0.75rem;color:var(--muted)"> AI MAGIC </span> <i class="fas fa-chevron-down"></i></div>
+
+    <div class="readme-preview">
+      <h3># processPayment Module</h3>
+      <div class="readme-line cyan"></div>
+      <div class="readme-line w-full"></div>
+      <div class="readme-line w-80"></div>
+      <div class="readme-line w-full"></div>
+      <div class="readme-line w-60"></div>
+      <div class="readme-line cyan" style="width:20%;animation-delay:0.3s"></div>
+      <div class="readme-line w-full" style="animation-delay:0.1s"></div>
+      <div class="readme-line w-40" style="animation-delay:0.2s"></div>
+    </div>
+  </div>
+
+  <!-- FEATURES -->
+  <section id="features" class="features-section">
+    <div class="section-header">
+      <span class="tag">Features</span>
+      <h2 class="section-title">Everything Your Docs Need</h2>
+      <p class="section-sub">From bare code to production-ready documentation in one click</p>
+    </div>
+    <div class="features-grid">
+      <div class="feature-card"><span class="feature-icon">🧠</span><h3 class="feature-title">Deep Code Analysis</h3><p class="feature-desc">Qwen-32B reads your entire codebase, understanding architecture, patterns, and intent — not just surface-level comments.</p></div>
+      <div class="feature-card"><span class="feature-icon">⚡</span><h3 class="feature-title">Instant Generation</h3><p class="feature-desc">Professional README with Tech Stack tables, Quick Start, Installation, API Reference — all in under 30 seconds.</p></div>
+      <div class="feature-card"><span class="feature-icon">🔗</span><h3 class="feature-title">Web3 Payments</h3><p class="feature-desc">Pay with USDT on Polygon or BSC directly from MetaMask. No credit cards, no KYC. Pure crypto.</p></div>
+      <div class="feature-card"><span class="feature-icon">📐</span><h3 class="feature-title">Architecture Diagrams</h3><p class="feature-desc">Auto-generates component relationships, data flows, and module dependencies in clean Markdown format.</p></div>
+      <div class="feature-card"><span class="feature-icon">🎨</span><h3 class="feature-title">Custom Tone</h3><p class="feature-desc">Tell it to be technical, funny, beginner-friendly, or enterprise-grade. Your docs, your voice.</p></div>
+      <div class="feature-card"><span class="feature-icon">💾</span><h3 class="feature-title">One-Click Download</h3><p class="feature-desc">Instantly download your README.md file, ready to push to GitHub. No login wall, no hidden limits.</p></div>
+    </div>
+  </section>
+
+  <!-- PRICING -->
+  <section class="pricing-section">
+    <div class="section-header">
+      <span class="tag">Pricing</span>
+      <h2 class="section-title">Simple Credits</h2>
+      <p class="section-sub">No subscriptions. No surprises. Pay only for what you generate.</p>
+    </div>
+    <div class="pricing-card">
+      <span class="tag">USDT — Polygon or BSC</span>
+      <div class="pricing-price">$5</div>
+      <p class="pricing-sub">= 10 Credits → 10 Professional READMEs</p>
+      <ul class="pricing-features">
+        <li><span class="check">✓</span> 10 README generations ($0.50 each)</li>
+        <li><span class="check">✓</span> Qwen-32B AI model (state-of-the-art)</li>
+        <li><span class="check">✓</span> Pay via MetaMask — Polygon or BSC</li>
+        <li><span class="check">✓</span> Instant credit top-up on chain confirmation</li>
+        <li><span class="check">✓</span> <strong style="color:var(--green)">10 FREE credits on signup</strong></li>
+      </ul>
+      <button class="btn-primary" onclick="showAuth('signup')" style="width:100%;justify-content:center;">
+        <i class="fas fa-gift"></i> Claim 10 Free Credits
+      </button>
+    </div>
+  </section>
+
+  <footer class="landing-footer">
+    <p>DS // AUTO-DOC ENGINE &copy; 2025 — Powered by Groq & Qwen-32B</p>
+  </footer>
+</div>
+
+<!-- ===================== AUTH ===================== -->
+<div id="auth-screen" class="screen-hidden">
+  <div class="auth-card glass" style="margin:auto">
+    <div class="auth-logo">DS // <span>ACCESS</span></div>
+
+    <!-- SIGN IN -->
+    <div id="signin-form">
+      <div class="form-group"><input type="email" id="signin-email" class="form-input" placeholder="Email address" /></div>
+      <div class="form-group"><input type="password" id="signin-password" class="form-input" placeholder="Password" /></div>
+      <button class="btn-primary" style="width:100%;justify-content:center;margin-top:8px" onclick="handleSignIn()">
+        <i class="fas fa-bolt"></i> Login
+      </button>
+      <div class="auth-divider"><span>or</span></div>
+      <div class="auth-switch">No account? <button onclick="toggleAuthMode('signup')">Create one free →</button></div>
+    </div>
+
+    <!-- SIGN UP -->
+    <div id="signup-form" style="display:none">
+      <div class="form-group"><input type="email" id="signup-email" class="form-input" placeholder="Email address" /></div>
+      <div class="form-group"><input type="password" id="signup-password" class="form-input" placeholder="Password (min. 6 chars)" /></div>
+      <button class="btn-primary" style="width:100%;justify-content:center;margin-top:8px" onclick="handleSignUp()">
+        <i class="fas fa-rocket"></i> Create Account
+      </button>
+      <div class="auth-notice"><i class="fas fa-gift"></i><span>You'll receive <strong>10 free credits</strong> instantly on signup — no payment needed to start.</span></div>
+      <div class="auth-divider"><span>or</span></div>
+      <div class="auth-switch">Already have an account? <button onclick="toggleAuthMode('signin')">Log in →</button></div>
+    </div>
+
+    <div style="text-align:center;margin-top:20px">
+      <button class="btn-ghost" onclick="showScreen('landing')" style="font-size:0.72rem;padding:10px 18px">
+        <i class="fas fa-arrow-left"></i> Back to Home
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== DASHBOARD ===================== -->
+<div id="dashboard-screen" class="screen-hidden">
+  <header class="dash-header">
+    <span class="dash-logo">DS // <span style="color:var(--txt)">AUTO-DOC</span></span>
+
+    <div class="dash-controls">
+      <div id="wallet-badge" class="wallet-badge" style="display:none">Wallet: --</div>
+      <div class="topup-wrap">
+        <select id="crypto-network" class="network-select">
+          <option value="polygon">Polygon</option>
+          <option value="bsc">BSC</option>
+        </select>
+        <button class="btn-topup" id="topup-btn" onclick="payWithUSDT()">
+          <i class="fas fa-wallet"></i> Top Up $5
+        </button>
+      </div>
+      <div class="balance-badge">$<span id="balance">0.00</span></div>
+      <button class="btn-signout" onclick="handleSignOut()"><i class="fas fa-power-off"></i></button>
+    </div>
+  </header>
+
+  <div class="dash-main">
+    <div id="chat-messages">
+      <div class="empty-state" id="empty-state">
+        <div class="empty-icon"><i class="fas fa-file-code"></i></div>
+        <p class="empty-title">Upload your source code and hit Generate<br>Cost: <span class="empty-cost">$0.50</span> per professional README</p>
+      </div>
+    </div>
+
+    <div class="input-area">
+      <div class="file-preview" id="file-preview">
+        <i class="fas fa-code" style="color:var(--cyan)"></i>
+        <span class="file-preview-name" id="file-name">file.js</span>
+        <button class="btn-clear-file" id="clear-file-btn"><i class="fas fa-trash"></i></button>
+      </div>
+      <div class="input-row">
+        <button class="btn-upload" id="file-upload-btn" title="Upload code file">
+          <i class="fas fa-plus"></i>
+        </button>
+        <input type="file" id="file-input" style="display:none" />
+        <textarea
+          id="message-input"
+          class="msg-input"
+          placeholder="Optional: Any specific instructions? (e.g. make it very technical, add humor)"
+          rows="1"
+        ></textarea>
+        <button class="btn-send" id="send-btn" title="Generate README">
+          <i class="fas fa-bolt"></i>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.7.0/ethers.umd.min.js"></script>
+<script src="main.js"></script>
+
+<script>
+  // Intersection Observer for feature cards
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach((e, i) => {
+      if (e.isIntersecting) {
+        setTimeout(() => e.target.classList.add('visible'), i * 100);
+      }
+    });
+  }, { threshold: 0.1 });
+  document.querySelectorAll('.feature-card').forEach(c => observer.observe(c));
+</script>
+
 </body>
 </html>
