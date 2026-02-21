@@ -1,62 +1,71 @@
+/* ================================================================
+   DS AUTO-DOC ENGINE · main.js
+   ================================================================ */
 (function () {
+  'use strict';
 
+  // ── CONFIG ────────────────────────────────────────────────
   var CFG = {
-    sbUrl:        "https://cfltxffuoodpzxigfpgo.supabase.co",
-    sbKey:        "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNmbHR4ZmZ1b29kcHp4aWdmcGdvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE2MzI5NzMsImV4cCI6MjA4NzIwODk3M30.jtqQq5YhxtoC-yG_xycbP76o1TcFc0mhe3AvPhgYGZA",
-    groqKey:      "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",
-    groqModel:    "qwen/qwen3-32b",
-    receiver:     "0xfF82D591F726eF56313EF958Bb7d7D85866C4E8B",
-    costPerDoc:   0.50,   // dollars
-    topupCredits: 10.00,  // dollars added per topup
-    topupUsdt:    "5",    // USDT cost
+    sbUrl:        'https://cfltxffuoodpzxigfpgo.supabase.co',
+    sbKey:        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNmbHR4ZmZ1b29kcHp4aWdmcGdvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE2MzI5NzMsImV4cCI6MjA4NzIwODk3M30.jtqQq5YhxtoC-yG_xycbP76o1TcFc0mhe3AvPhgYGZA',
+    groqKey:      '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',
+    groqModel:    'qwen/qwen3-32b',
+    receiver:     '0xfF82D591F726eF56313EF958Bb7d7D85866C4E8B',
+    costPerDoc:   0.50,
+    topupCredits: 10.00,
+    topupUsdt:    '5',
+    adminEmail:   'ahmadzaoujal2009@gmail.com',
+    affiliateKey: 'ds_affiliate_ref',
     networks: {
       polygon: {
-        chainId: 137, chainName: "Polygon Mainnet",
-        nativeCurrency: { name: "MATIC", symbol: "MATIC", decimals: 18 },
-        rpcUrls: ["https://polygon-rpc.com"],
-        blockExplorerUrls: ["https://polygonscan.com"],
-        usdtAddress: "0xc2132D05D31c914a87C6611C10748AEb04B58e8F",
+        chainId: 137, chainName: 'Polygon Mainnet',
+        nativeCurrency: { name: 'MATIC', symbol: 'MATIC', decimals: 18 },
+        rpcUrls: ['https://polygon-rpc.com'],
+        blockExplorerUrls: ['https://polygonscan.com'],
+        usdtAddress: '0xc2132D05D31c914a87C6611C10748AEb04B58e8F',
         usdtDecimals: 6,
       },
       bsc: {
-        chainId: 56, chainName: "BNB Smart Chain",
-        nativeCurrency: { name: "BNB", symbol: "BNB", decimals: 18 },
-        rpcUrls: ["https://bsc-dataseed.binance.org/"],
-        blockExplorerUrls: ["https://bscscan.com"],
-        usdtAddress: "0x55d398326f99059fF775485246999027B3197955",
+        chainId: 56, chainName: 'BNB Smart Chain',
+        nativeCurrency: { name: 'BNB', symbol: 'BNB', decimals: 18 },
+        rpcUrls: ['https://bsc-dataseed.binance.org/'],
+        blockExplorerUrls: ['https://bscscan.com'],
+        usdtAddress: '0x55d398326f99059fF775485246999027B3197955',
         usdtDecimals: 18,
       },
     },
   };
 
   var ERC20_ABI = [
-    "function transfer(address to, uint256 amount) returns (bool)",
-    "function decimals() view returns (uint8)",
-    "function balanceOf(address account) view returns (uint256)",
+    'function transfer(address to, uint256 amount) returns (bool)',
+    'function decimals() view returns (uint8)',
+    'function balanceOf(address account) view returns (uint256)',
   ];
 
-  // ── STATE ─────────────────────────────────────────────────
-  var db           = null;
-  var currentUser  = null;
+  // ── STATE ──────────────────────────────────────────────────
+  var db          = null;
+  var currentUser = null;
   var selectedFile = null;
-  var ethProvider  = null;
-  var ethSigner    = null;
+  var ethProvider = null;
+  var ethSigner   = null;
 
-  // ── BOOT ──────────────────────────────────────────────────
-  document.addEventListener("DOMContentLoaded", function () {
+  // ================================================================
+  // BOOT
+  // ================================================================
+  document.addEventListener('DOMContentLoaded', function () {
     db = window.supabase.createClient(CFG.sbUrl, CFG.sbKey);
 
-    // Capture referral code from URL before anything else
-    captureReferralCode();
+    // BUG FIX #2: Capture ?ref= from URL and persist it
+    captureAffiliateCode();
 
+    // Restore session
     db.auth.getSession().then(function (res) {
       var session = res && res.data && res.data.session;
       if (session && session.user) {
         currentUser = session.user;
-        // Profile already exists for returning users
-        showScreen("dashboard");
+        showScreen('dashboard');
       } else {
-        showScreen("landing");
+        showScreen('landing');
       }
     });
 
@@ -64,285 +73,308 @@
       currentUser = session && session.user ? session.user : null;
     });
 
-    var fi  = document.getElementById("file-input");
-    var ub  = document.getElementById("file-upload-btn");
-    var cfb = document.getElementById("clear-file-btn");
-    var sb  = document.getElementById("send-btn");
+    // File input wiring
+    var fi  = document.getElementById('file-input');
+    var ub  = document.getElementById('file-upload-btn');
+    var cfb = document.getElementById('clear-file-btn');
+    var sb  = document.getElementById('send-btn');
 
-    if (ub)  ub.addEventListener("click",  function () { fi && fi.click(); });
-    if (sb)  sb.addEventListener("click",  generateReadme);
-    if (cfb) cfb.addEventListener("click", clearFile);
-
-    if (fi) {
-      fi.addEventListener("change", function (e) {
-        var f = e.target.files && e.target.files[0];
-        if (!f) return;
-        selectedFile = f;
-        var n = document.getElementById("file-name");
-        if (n) n.textContent = f.name;
-        var p = document.getElementById("file-preview");
-        if (p) p.classList.add("visible");
-        showToast("File loaded: " + f.name, "info");
-      });
-    }
-
-    // Populate affiliate link on dashboard
-    populateAffiliateLink();
+    if (ub)  ub.addEventListener('click', function () { fi && fi.click(); });
+    if (sb)  sb.addEventListener('click', generateReadme);
+    if (cfb) cfb.addEventListener('click', clearFile);
+    if (fi)  fi.addEventListener('change', onFileSelected);
   });
 
-  // ── REFERRAL CODE CAPTURE ────────────────────────────────
-  function captureReferralCode() {
-    var params = new URLSearchParams(window.location.search);
-    var ref    = params.get("ref");
-    if (ref) {
-      sessionStorage.setItem("ds_ref", ref);
-      // Clean URL without reloading
-      var clean = window.location.pathname;
-      window.history.replaceState({}, document.title, clean);
+  // ================================================================
+  // BUG FIX #2: AFFILIATE CODE CAPTURE
+  // Reads ?ref=CODE from the URL → stores in localStorage
+  // Cleans the URL so it doesn't persist on refresh
+  // ================================================================
+  function captureAffiliateCode() {
+    try {
+      var params  = new URLSearchParams(window.location.search);
+      var refCode = params.get('ref');
+      if (refCode && refCode.trim() !== '') {
+        localStorage.setItem(CFG.affiliateKey, refCode.trim());
+        // Clean URL without triggering a reload
+        var cleanUrl = window.location.pathname + window.location.hash;
+        window.history.replaceState({}, document.title, cleanUrl);
+      }
+    } catch (e) {
+      // localStorage may be blocked in some contexts; non-fatal
+      console.warn('Affiliate capture skipped:', e.message);
     }
   }
 
-  function getReferralCode() {
-    return sessionStorage.getItem("ds_ref") || null;
+  function getStoredAffiliateCode() {
+    try { return localStorage.getItem(CFG.affiliateKey) || null; }
+    catch (e) { return null; }
   }
 
-  function clearFile() {
-    selectedFile = null;
-    var fi = document.getElementById("file-input");
-    if (fi) fi.value = "";
-    var p = document.getElementById("file-preview");
-    if (p) p.classList.remove("visible");
+  function clearStoredAffiliateCode() {
+    try { localStorage.removeItem(CFG.affiliateKey); } catch (e) { /* noop */ }
   }
 
-  // ── SCREENS ───────────────────────────────────────────────
+  // ================================================================
+  // SCREENS
+  // ================================================================
   function showScreen(name) {
-    ["landing", "auth", "dashboard"].forEach(function (s) {
-      var el = document.getElementById(s + "-screen");
+    ['landing', 'auth', 'dashboard'].forEach(function (s) {
+      var el = document.getElementById(s + '-screen');
       if (!el) return;
-      if (s === name) { el.classList.remove("screen-hidden"); }
-      else            { el.classList.add("screen-hidden"); }
+      el.classList.toggle('hidden', s !== name);
     });
-    if (name === "dashboard") {
-      updateBalanceDisplay();
-      populateAffiliateLink();
+    if (name === 'dashboard') {
+      refreshBalance();
+      loadAffiliateLink();
     }
   }
 
   function showAuth(mode) {
-    showScreen("auth");
-    toggleAuthMode(mode || "signin");
+    showScreen('auth');
+    toggleAuthMode(mode || 'signin');
+
+    // Show referral notice if a code is stored
+    var notice = document.getElementById('ref-notice');
+    if (notice) {
+      notice.style.display = getStoredAffiliateCode() ? 'flex' : 'none';
+    }
   }
 
   function toggleAuthMode(mode) {
-    var si = document.getElementById("signin-form");
-    var su = document.getElementById("signup-form");
-    if (si) si.style.display = mode === "signin" ? "block" : "none";
-    if (su) su.style.display = mode === "signup" ? "block" : "none";
+    var si = document.getElementById('signin-form');
+    var su = document.getElementById('signup-form');
+    if (si) si.style.display = (mode === 'signin') ? 'block' : 'none';
+    if (su) su.style.display = (mode === 'signup') ? 'block' : 'none';
   }
 
-  // ── AFFILIATE LINK UI ─────────────────────────────────────
-  function populateAffiliateLink() {
-    if (!currentUser) return;
-    var el = document.getElementById("affiliate-link-display");
-    if (!el) return;
-
-    db.from("profiles")
-      .select("affiliate_id")
-      .eq("id", currentUser.id)
-      .single()
-      .then(function (r) {
-        if (r.data && r.data.affiliate_id) {
-          var link = window.location.origin + window.location.pathname + "?ref=" + r.data.affiliate_id;
-          el.value  = link;
-          el.title  = link;
-        }
-      });
-  }
-
-  function copyAffiliateLink() {
-    var el = document.getElementById("affiliate-link-display");
-    if (!el) return;
-    navigator.clipboard.writeText(el.value).then(function () {
-      showToast("Affiliate link copied! Earn $5 per referral.", "success");
-    }).catch(function () {
-      el.select();
-      document.execCommand("copy");
-      showToast("Link copied!", "success");
-    });
-  }
-
-  // ── AUTH ──────────────────────────────────────────────────
+  // ================================================================
+  // AUTH
+  // ================================================================
   function handleSignUp() {
-    var em  = val("signup-email");
-    var pw  = val("signup-password");
-    if (!em || !pw)    return showToast("Email and password required.", "error");
-    if (pw.length < 6) return showToast("Password needs 6+ characters.", "error");
+    var email = val('signup-email').trim();
+    var pw    = val('signup-password');
 
-    var ref  = getReferralCode();
-    var meta = ref ? { ref: ref } : {};
+    if (!email || !pw)    return toast('Email and password required.', 'error');
+    if (pw.length < 6)    return toast('Password must be at least 6 characters.', 'error');
 
-    setLoading(true, "Creating your account...");
+    // BUG FIX #2: Pass the stored affiliate code to Supabase
+    // It will land in auth.users.raw_user_meta_data and be picked up by the trigger
+    var refCode = getStoredAffiliateCode();
+    var metadata = refCode ? { affiliate_ref: refCode } : {};
+
+    setLoading(true, 'Creating account…');
+
     db.auth.signUp({
-      email: em.trim(),
+      email:    email,
       password: pw,
-      options: { data: meta }    // passed to raw_user_meta_data → trigger picks it up
+      options:  { data: metadata },
     })
       .then(function (r) {
         if (r.error) throw r.error;
+
         if (r.data && r.data.user) {
           currentUser = r.data.user;
-          sessionStorage.removeItem("ds_ref"); // consume referral code
-          showToast("Welcome! $5.00 free credit added. Start generating!", "success");
-          showScreen("dashboard");
-          return;
+          clearStoredAffiliateCode();
+          toast('Account created! $5.00 free credit added.', 'success');
+          showScreen('dashboard');
+        } else {
+          // Email confirmation required
+          toast('Check your email to confirm your account.', 'info');
         }
-        showToast("Check your email to confirm your account.", "info");
       })
-      .catch(function (e) { showToast(e.message || "Sign-up failed.", "error"); })
+      .catch(function (e) { toast(e.message || 'Sign-up failed.', 'error'); })
       .finally(function () { setLoading(false); });
   }
 
   function handleSignIn() {
-    var em = val("signin-email");
-    var pw = val("signin-password");
-    if (!em || !pw) return showToast("Email and password required.", "error");
+    var email = val('signin-email').trim();
+    var pw    = val('signin-password');
 
-    setLoading(true, "Logging in...");
-    db.auth.signInWithPassword({ email: em.trim(), password: pw })
+    if (!email || !pw) return toast('Email and password required.', 'error');
+
+    setLoading(true, 'Signing in…');
+
+    db.auth.signInWithPassword({ email: email, password: pw })
       .then(function (r) {
         if (r.error) throw r.error;
         currentUser = r.data.user;
-        showToast("Welcome back!", "success");
-        showScreen("dashboard");
+        toast('Welcome back!', 'success');
+        showScreen('dashboard');
       })
-      .catch(function (e) { showToast(e.message || "Login failed.", "error"); })
+      .catch(function (e) { toast(e.message || 'Login failed.', 'error'); })
       .finally(function () { setLoading(false); });
   }
 
   function handleSignOut() {
     db.auth.signOut().then(function () {
       currentUser = selectedFile = ethProvider = ethSigner = null;
-      var wb = document.getElementById("wallet-badge");
-      if (wb) wb.style.display = "none";
+      hide('wallet-badge');
       resetChatUI();
-      showScreen("landing");
-      showToast("Signed out.", "info");
+      showScreen('landing');
+      toast('Signed out.', 'info');
     });
   }
 
-  // ── BALANCE ───────────────────────────────────────────────
-  function updateBalanceDisplay() {
+  // ================================================================
+  // AFFILIATE LINK (dashboard)
+  // ================================================================
+  function loadAffiliateLink() {
     if (!currentUser) return;
-    db.from("profiles")
-      .select("credits")
-      .eq("id", currentUser.id)
+    db.from('profiles')
+      .select('affiliate_code')
+      .eq('id', currentUser.id)
       .single()
       .then(function (r) {
-        if (r.data) setBalanceEl(r.data.credits);
+        if (r.data && r.data.affiliate_code) {
+          var base = window.location.origin + window.location.pathname;
+          var link = base + '?ref=' + r.data.affiliate_code;
+          var el   = document.getElementById('affiliate-link');
+          if (el) el.value = link;
+        }
       });
   }
 
-  function setBalanceEl(val) {
-    var el = document.getElementById("balance");
-    if (el) el.textContent = Number(val).toFixed(2);
+  function copyAffiliateLink() {
+    var el = document.getElementById('affiliate-link');
+    if (!el || !el.value) return;
+    navigator.clipboard.writeText(el.value)
+      .then(function () { toast('Affiliate link copied! Earn $5 per referral.', 'success'); })
+      .catch(function () {
+        el.select();
+        document.execCommand('copy');
+        toast('Link copied!', 'success');
+      });
   }
 
-  // ── CREDIT OPS via RPC (bypasses RLS safely) ─────────────
+  // ================================================================
+  // BALANCE
+  // ================================================================
+  function refreshBalance() {
+    if (!currentUser) return;
+    db.from('profiles')
+      .select('credits')
+      .eq('id', currentUser.id)
+      .single()
+      .then(function (r) {
+        if (r.data) setBalanceDisplay(r.data.credits);
+      });
+  }
+
+  function setBalanceDisplay(v) {
+    var el = document.getElementById('balance');
+    if (el) el.textContent = '$' + Number(v).toFixed(2);
+  }
+
+  // ================================================================
+  // CREDIT OPS — all via SECURITY DEFINER RPC to bypass RLS safely
+  // ================================================================
   function deductCredits(amount) {
-    return db.rpc("deduct_credits", { p_amount: amount }).then(function (r) {
+    return db.rpc('deduct_credits', { p_amount: amount }).then(function (r) {
       if (r.error) throw new Error(r.error.message);
       return r.data;
     });
   }
 
   function addCredits(amount) {
-    return db.rpc("add_credits", { p_amount: amount }).then(function (r) {
+    return db.rpc('add_credits', { p_amount: amount }).then(function (r) {
       if (r.error) throw new Error(r.error.message);
       return r.data;
     });
   }
 
-  // ── GROQ GENERATION ───────────────────────────────────────
+  // ================================================================
+  // README GENERATION
+  // ================================================================
   function generateReadme() {
-    if (!currentUser)  return showToast("Please log in first.", "error");
-    if (!selectedFile) return showToast("Upload a code file first.", "error");
-    var sendBtn = document.getElementById("send-btn");
+    if (!currentUser)  return toast('Please log in first.', 'error');
+    if (!selectedFile) return toast('Upload a code file first.', 'error');
 
-    // Check credits first
-    db.from("profiles")
-      .select("credits")
-      .eq("id", currentUser.id)
+    var sendBtn = document.getElementById('send-btn');
+
+    db.from('profiles')
+      .select('credits')
+      .eq('id', currentUser.id)
       .single()
       .then(function (r) {
         if (!r.data || Number(r.data.credits) < CFG.costPerDoc) {
-          throw new Error("Insufficient balance ($" + CFG.costPerDoc.toFixed(2) + " needed). Top up with USDT.");
+          throw new Error('Insufficient balance. Top up to continue ($0.50 per README).');
         }
         return selectedFile.text();
       })
       .then(function (code) {
-        setLoading(true, "Analyzing code with Qwen2.5-32B...");
+        setLoading(true, 'Analyzing with Qwen-32B…');
         if (sendBtn) sendBtn.disabled = true;
 
-        var instr   = val("message-input") || "";
-        var snippet = code.substring(0, 12000);
-        var sys = [
-          "You are a world-class Senior Technical Writer and Software Architect.",
-          "Generate an exceptional professional README.md for the provided code.",
-          "- Use professional emojis at the start of each major section heading.",
-          "- Include: 🧠 Overview, ✨ Features, 🚀 Quick Start, 📦 Installation, 🏗 Architecture,",
-          "  🛠 Tech Stack (Markdown table: Technology | Version | Purpose),",
-          "  📡 API Reference (if applicable), 🤝 Contributing, 📄 License.",
-          "- Go deep on architecture: explain data flow, module relationships, design patterns.",
-          "- Write as a Principal Engineer reviewing this codebase — be precise and insightful.",
-          "- Output ONLY raw Markdown — no preamble, no wrapper code fences.",
-        ].join("\n");
-        var usr = (instr ? "Special Instructions: " + instr + "\n\n" : "")
-          + "Filename: " + selectedFile.name + "\n\nCode:\n```\n" + snippet + "\n```";
+        var instructions = val('message-input');
+        var snippet      = code.substring(0, 12000);
 
-        return fetch("https://api.groq.com/openai/v1/chat/completions", {
-          method: "POST",
+        var systemPrompt = [
+          'You are a world-class Senior Technical Writer and Software Architect.',
+          'Generate a professional, senior-engineer-level README.md for the provided code.',
+          'Requirements:',
+          '- Use emojis at the start of each major section heading.',
+          '- Include: Overview, ✨ Features, 🚀 Quick Start, 📦 Installation,',
+          '  🏗 Architecture (deep, explain data flows and module relationships),',
+          '  🛠 Tech Stack (Markdown table: Technology | Version | Purpose),',
+          '  📡 API Reference (if applicable), 🤝 Contributing, 📄 License.',
+          '- Write like a Principal Engineer reviewing this codebase.',
+          '- Output ONLY raw Markdown. No preamble. No wrapper code fences.',
+        ].join('\n');
+
+        var userPrompt = (instructions ? 'Special instructions: ' + instructions + '\n\n' : '')
+          + 'Filename: ' + selectedFile.name + '\n\nCode:\n```\n' + snippet + '\n```';
+
+        return fetch('https://api.groq.com/openai/v1/chat/completions', {
+          method:  'POST',
           headers: {
-            "Content-Type":  "application/json",
-            "Authorization": "Bearer " + CFG.groqKey,
+            'Content-Type':  'application/json',
+            'Authorization': 'Bearer ' + CFG.groqKey,
           },
           body: JSON.stringify({
-            model: CFG.groqModel, temperature: 0.5, max_tokens: 4096,
+            model:       CFG.groqModel,
+            temperature: 0.5,
+            max_tokens:  4096,
             messages: [
-              { role: "system", content: sys },
-              { role: "user",   content: usr },
+              { role: 'system', content: systemPrompt },
+              { role: 'user',   content: userPrompt   },
             ],
           }),
         });
       })
       .then(function (res) {
-        if (!res.ok) return res.json().then(function (e) {
-          throw new Error((e && e.error && e.error.message) || ("Groq error " + res.status));
-        });
+        if (!res.ok) {
+          return res.json().then(function (e) {
+            throw new Error((e && e.error && e.error.message) || 'Groq API error ' + res.status);
+          });
+        }
         return res.json();
       })
       .then(function (data) {
-        var text = data && data.choices && data.choices[0]
-          && data.choices[0].message && data.choices[0].message.content;
-        if (!text) throw new Error("AI returned an empty response. Please try again.");
+        var text = data &&
+          data.choices && data.choices[0] &&
+          data.choices[0].message && data.choices[0].message.content;
+        if (!text) throw new Error('AI returned an empty response.');
 
-        return deductCredits(CFG.costPerDoc).then(function (newBalance) {
-          setBalanceEl(newBalance);
+        return deductCredits(CFG.costPerDoc).then(function (newBal) {
+          setBalanceDisplay(newBal);
 
-          db.from("transactions").insert([{
+          // Log the transaction
+          db.from('transactions').insert([{
             user_id:     currentUser.id,
-            type:        "debit",
-            amount:      Number(CFG.costPerDoc),
-            description: "README generated for: " + selectedFile.name,
+            type:        'debit',
+            amount:      CFG.costPerDoc,
+            description: 'README · ' + selectedFile.name,
           }]);
 
           renderResult(text, selectedFile.name);
-          showToast("README generated! $" + CFG.costPerDoc.toFixed(2) + " deducted.", "success");
+          toast('README generated! $0.50 deducted.', 'success');
         });
       })
       .catch(function (e) {
-        console.error("Generation error:", e);
+        console.error('Generation error:', e);
         renderError(e.message);
-        showToast("Error: " + e.message, "error");
+        toast(e.message, 'error');
       })
       .finally(function () {
         setLoading(false);
@@ -350,103 +382,163 @@
       });
   }
 
-  // ── MARKDOWN RENDERER ─────────────────────────────────────
+  // ================================================================
+  // FILE HANDLING
+  // ================================================================
+  function onFileSelected(e) {
+    var f = e.target.files && e.target.files[0];
+    if (!f) return;
+    selectedFile = f;
+    var nameEl = document.getElementById('file-name');
+    if (nameEl) nameEl.textContent = f.name;
+    var preview = document.getElementById('file-preview');
+    if (preview) preview.classList.add('visible');
+    toast('File ready: ' + f.name, 'info');
+  }
+
+  function clearFile() {
+    selectedFile = null;
+    var fi = document.getElementById('file-input');
+    if (fi) fi.value = '';
+    var preview = document.getElementById('file-preview');
+    if (preview) preview.classList.remove('visible');
+  }
+
+  // ================================================================
+  // MARKDOWN RENDERER
+  // ================================================================
   function esc(s) {
-    return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+    return String(s)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   }
 
   function renderMarkdown(raw) {
-    if (!raw) return "";
-    var md = raw.replace(/^(Certainly[!,.]?|Here is[^:]*:|Sure[!,.]?|I['']ve generated)[^\n]*\n+/gi,"").trim();
+    if (!raw) return '';
+    var md = raw
+      .replace(/^(Certainly[!,.]?|Here is[^:]*:|Sure[!,.]?)[^\n]*\n+/gi, '')
+      .trim();
 
-    md = md.replace(/```[\w]*\n?([\s\S]*?)```/g, function(_, c){ return "<pre>" + esc(c.trim()) + "</pre>"; });
-
-    md = md.replace(/^\|(.+)\|\s*\n\|[\s\-|:]+\|\s*\n((?:\|.+\|\n?)+)/gm, function(_,h,r){
-      var ths = h.split("|").filter(function(x){return x.trim();}).map(function(x){return "<th>"+x.trim()+"</th>";}).join("");
-      var trs = r.trim().split("\n").map(function(row){
-        var tds = row.split("|").filter(function(x){return x.trim();}).map(function(x){return "<td>"+x.trim()+"</td>";}).join("");
-        return "<tr>"+tds+"</tr>";
-      }).join("");
-      return "<table><thead><tr>"+ths+"</tr></thead><tbody>"+trs+"</tbody></table>";
+    // Fenced code blocks
+    md = md.replace(/```[\w-]*\n?([\s\S]*?)```/g, function (_, c) {
+      return '<pre><code>' + esc(c.trim()) + '</code></pre>';
     });
 
-    md = md.replace(/^### (.+)$/gm,"<h3>$1</h3>");
-    md = md.replace(/^## (.+)$/gm, "<h2>$1</h2>");
-    md = md.replace(/^# (.+)$/gm,  "<h1>$1</h1>");
-    md = md.replace(/\*\*\*(.+?)\*\*\*/g,"<strong><em>$1</em></strong>");
-    md = md.replace(/\*\*(.+?)\*\*/g,"<strong>$1</strong>");
-    md = md.replace(/\*(.+?)\*/g,"<em>$1</em>");
-    md = md.replace(/`([^`]+)`/g,"<code>$1</code>");
-    md = md.replace(/^> (.+)$/gm,"<blockquote>$1</blockquote>");
-    md = md.replace(/^[\-\*\+] (.+)$/gm,"<li>$1</li>");
-    md = md.replace(/^\d+\. (.+)$/gm,"<li>$1</li>");
-    md = md.replace(/(<li>[\s\S]+?<\/li>)(\n(?!<li>)|$)/g,"<ul>$1</ul>$2");
-    md = md.replace(/^-{3,}$/gm,"<hr>");
-    md = md.replace(/^(?!<[a-zA-Z\/])(.+)$/gm,"<p>$1</p>");
-    md = md.replace(/\[([^\]]+)\]\(([^)]+)\)/g,'<a href="$2" target="_blank" rel="noopener">$1</a>');
+    // Tables
+    md = md.replace(/^\|(.+)\|\s*\n\|[\s\-|:]+\|\s*\n((?:\|.+\|\n?)+)/gm, function (_, h, r) {
+      var ths = h.split('|').filter(function (x) { return x.trim(); })
+        .map(function (x) { return '<th>' + x.trim() + '</th>'; }).join('');
+      var trs = r.trim().split('\n').map(function (row) {
+        var tds = row.split('|').filter(function (x) { return x.trim(); })
+          .map(function (x) { return '<td>' + x.trim() + '</td>'; }).join('');
+        return '<tr>' + tds + '</tr>';
+      }).join('');
+      return '<div class="table-wrap"><table><thead><tr>' + ths + '</tr></thead><tbody>' + trs + '</tbody></table></div>';
+    });
+
+    // Headings
+    md = md.replace(/^### (.+)$/gm, '<h3>$1</h3>');
+    md = md.replace(/^## (.+)$/gm,  '<h2>$1</h2>');
+    md = md.replace(/^# (.+)$/gm,   '<h1>$1</h1>');
+
+    // Inline formatting
+    md = md.replace(/\*\*\*(.+?)\*\*\*/g, '<strong><em>$1</em></strong>');
+    md = md.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+    md = md.replace(/\*(.+?)\*/g, '<em>$1</em>');
+    md = md.replace(/`([^`]+)`/g, '<code>$1</code>');
+    md = md.replace(/^> (.+)$/gm, '<blockquote>$1</blockquote>');
+
+    // Lists
+    md = md.replace(/^[\-\*\+] (.+)$/gm, '<li>$1</li>');
+    md = md.replace(/^\d+\. (.+)$/gm, '<li>$1</li>');
+    md = md.replace(/(<li>[\s\S]+?<\/li>)(\n(?!<li>)|$)/g, '<ul>$1</ul>$2');
+
+    // Links
+    md = md.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
+
+    // Horizontal rule
+    md = md.replace(/^-{3,}$/gm, '<hr>');
+
+    // Paragraphs
+    md = md.replace(/^(?!<[a-zA-Z\/])(.+)$/gm, '<p>$1</p>');
+
     return md;
   }
 
-  // ── RENDER RESULT / ERROR ─────────────────────────────────
-  function renderResult(readmeText, filename) {
-    var chat = document.getElementById("chat-messages");
+  // ================================================================
+  // RENDER RESULT / ERROR
+  // ================================================================
+  function renderResult(text, filename) {
+    var chat = document.getElementById('chat-messages');
     if (!chat) return;
+
     chat.innerHTML =
       '<div class="result-card">' +
         '<div class="result-header">' +
-          '<span class="result-tag">✅ POWERED BY QWEN2.5-32B</span>' +
-          '<span style="font-family:var(--mono);font-size:.7rem;color:var(--muted)">' + esc(filename) + '</span>' +
+          '<span class="result-badge">✅ Qwen-32B</span>' +
+          '<span class="result-file">' + esc(filename) + '</span>' +
         '</div>' +
-        '<div class="result-body">' + renderMarkdown(readmeText) + '</div>' +
-        '<div style="padding:0 28px 28px">' +
-          '<button class="btn-download" id="dl-btn">⬇ Download README.md</button>' +
+        '<div class="result-body">' + renderMarkdown(text) + '</div>' +
+        '<div class="result-footer">' +
+          '<button class="btn-download" id="dl-btn">↓ Download README.md</button>' +
         '</div>' +
       '</div>';
 
-    var dlBtn = document.getElementById("dl-btn");
-    if (dlBtn) dlBtn.addEventListener("click", function () {
-      var blob = new Blob([readmeText], { type: "text/markdown;charset=utf-8" });
-      var a    = document.createElement("a");
-      a.href   = URL.createObjectURL(blob);
-      a.download = "README.md";
-      document.body.appendChild(a);
-      a.click();
-      setTimeout(function () { document.body.removeChild(a); URL.revokeObjectURL(a.href); }, 100);
-    });
+    var dlBtn = document.getElementById('dl-btn');
+    if (dlBtn) {
+      dlBtn.addEventListener('click', function () {
+        var blob = new Blob([text], { type: 'text/markdown;charset=utf-8' });
+        var a    = document.createElement('a');
+        a.href   = URL.createObjectURL(blob);
+        a.download = 'README.md';
+        document.body.appendChild(a);
+        a.click();
+        setTimeout(function () {
+          document.body.removeChild(a);
+          URL.revokeObjectURL(a.href);
+        }, 100);
+      });
+    }
     chat.scrollTop = 0;
   }
 
   function renderError(msg) {
-    var chat = document.getElementById("chat-messages");
-    if (!chat) return;
-    chat.innerHTML =
-      '<div class="error-card"><strong>⚠ GENERATION FAILED</strong><p>' + esc(msg) + '</p></div>';
+    var chat = document.getElementById('chat-messages');
+    if (chat) {
+      chat.innerHTML =
+        '<div class="error-card">' +
+          '<p class="error-title">Generation failed</p>' +
+          '<p class="error-msg">' + esc(msg) + '</p>' +
+        '</div>';
+    }
   }
 
   function resetChatUI() {
-    var chat = document.getElementById("chat-messages");
-    if (!chat) return;
-    chat.innerHTML =
-      '<div class="empty-state">' +
-        '<div class="empty-icon"><i class="fas fa-file-code"></i></div>' +
-        '<p class="empty-title">Upload your source code and hit Generate<br>' +
-        'Cost: <span class="empty-cost">$0.50</span> per professional README</p>' +
-      '</div>';
+    var chat = document.getElementById('chat-messages');
+    if (chat) {
+      chat.innerHTML =
+        '<div class="empty-state">' +
+          '<div class="empty-icon">⌘</div>' +
+          '<p class="empty-title">Upload your source code to get started</p>' +
+          '<p class="empty-sub">$0.50 per README · Powered by Qwen-32B</p>' +
+        '</div>';
+    }
   }
 
-  // ── WEB3 PAYMENT (Ethers v6) ──────────────────────────────
+  // ================================================================
+  // WEB3 PAYMENT (Ethers v6)
+  // ================================================================
   function payWithUSDT() {
-    if (!currentUser) return showToast("Please log in first.", "error");
-    if (typeof window.ethers === "undefined") return showToast("ethers.js not loaded.", "error");
-    if (!window.ethereum) return showToast("MetaMask not detected.", "error");
+    if (!currentUser) return toast('Please log in first.', 'error');
+    if (typeof window.ethers === 'undefined') return toast('ethers.js not loaded.', 'error');
+    if (!window.ethereum) return toast('MetaMask not detected.', 'error');
 
-    var topupBtn   = document.getElementById("topup-btn");
+    var topupBtn   = document.getElementById('topup-btn');
     var walletAddr = null;
-
     if (topupBtn) topupBtn.disabled = true;
-    setLoading(true, "Connecting wallet...");
+    setLoading(true, 'Connecting wallet…');
 
-    window.ethereum.request({ method: "eth_requestAccounts" })
+    window.ethereum.request({ method: 'eth_requestAccounts' })
       .then(function () {
         ethProvider = new ethers.BrowserProvider(window.ethereum);
         return ethProvider.getSigner();
@@ -457,14 +549,15 @@
       })
       .then(function (addr) {
         walletAddr = addr;
-        var badge = document.getElementById("wallet-badge");
-        if (badge) { badge.textContent = addr.slice(0,6)+"..."+addr.slice(-4); badge.style.display="block"; }
-
-        var netKey = (document.getElementById("crypto-network")||{}).value || "bsc";
+        var badge = document.getElementById('wallet-badge');
+        if (badge) {
+          badge.textContent = addr.slice(0, 6) + '…' + addr.slice(-4);
+          badge.style.display = 'block';
+        }
+        var netKey = (document.getElementById('crypto-network') || {}).value || 'bsc';
         var net    = CFG.networks[netKey];
-        if (!net) throw new Error("Unknown network.");
-
-        setLoading(true, "Switching network...");
+        if (!net) throw new Error('Unknown network selected.');
+        setLoading(true, 'Switching network…');
         return switchOrAddChain(net).then(function () { return { net: net, netKey: netKey }; });
       })
       .then(function (ctx) {
@@ -472,46 +565,45 @@
         return ethProvider.getSigner().then(function (s) { ethSigner = s; return ctx; });
       })
       .then(function (ctx) {
-        setLoading(true, "Checking USDT balance...");
+        setLoading(true, 'Checking USDT balance…');
         var contract = new ethers.Contract(ctx.net.usdtAddress, ERC20_ABI, ethSigner);
         var sendAmt  = ethers.parseUnits(CFG.topupUsdt, ctx.net.usdtDecimals);
         return contract.balanceOf(walletAddr).then(function (bal) {
           if (bal < sendAmt) {
-            var h = parseFloat(ethers.formatUnits(bal, ctx.net.usdtDecimals)).toFixed(2);
-            throw new Error("Insufficient USDT. Have $" + h + ", need $" + CFG.topupUsdt + ".");
+            var have = parseFloat(ethers.formatUnits(bal, ctx.net.usdtDecimals)).toFixed(2);
+            throw new Error('Insufficient USDT. Have $' + have + ', need $' + CFG.topupUsdt + '.');
           }
-          setLoading(true, "Waiting for MetaMask approval...");
-          showToast("Confirm the transaction in MetaMask.", "info");
+          setLoading(true, 'Confirm in MetaMask…');
+          toast('Approve the transaction in MetaMask.', 'info');
           return contract.transfer(CFG.receiver, sendAmt).then(function (tx) {
-            showToast("Tx sent: " + tx.hash.slice(0,14) + "...", "info");
-            setLoading(true, "Waiting for on-chain confirmation...");
-            return tx.wait(1).then(function (receipt) { return { receipt: receipt, netKey: ctx.netKey }; });
+            toast('Transaction sent. Waiting for confirmation…', 'info');
+            setLoading(true, 'Waiting for on-chain confirmation…');
+            return tx.wait(1).then(function (receipt) {
+              return { receipt: receipt, netKey: ctx.netKey };
+            });
           });
         });
       })
       .then(function (ctx) {
-        if (ctx.receipt.status !== 1) throw new Error("Transaction reverted on-chain.");
-
-        return addCredits(CFG.topupCredits).then(function (newBalance) {
-          db.from("transactions").insert([{
+        if (ctx.receipt.status !== 1) throw new Error('Transaction reverted on-chain.');
+        return addCredits(CFG.topupCredits).then(function (newBal) {
+          db.from('transactions').insert([{
             user_id:     currentUser.id,
-            type:        "topup",
-            amount:      Number(CFG.topupCredits),
-            description: "USDT top-up via " + ctx.netKey + " — " + CFG.topupUsdt + " USDT",
+            type:        'topup',
+            amount:      CFG.topupCredits,
+            description: 'USDT top-up via ' + ctx.netKey,
             tx_hash:     ctx.receipt.hash,
           }]);
-          setBalanceEl(newBalance);
-          var badge = document.getElementById("wallet-badge");
-          if (badge) badge.textContent = walletAddr.slice(0,6)+"..."+walletAddr.slice(-4)+" ✓";
-          showToast("Payment confirmed! +$" + CFG.topupCredits.toFixed(2) + " credits.", "success");
+          setBalanceDisplay(newBal);
+          toast('Payment confirmed! +$' + CFG.topupCredits.toFixed(2) + ' added.', 'success');
         });
       })
       .catch(function (e) {
-        console.error("Payment error:", e);
-        if (e.code === 4001 || (e.message && e.message.toLowerCase().includes("user rejected")))
-          showToast("Transaction cancelled.", "info");
-        else
-          showToast("Payment error: " + (e.message || "Unknown"), "error");
+        if (e.code === 4001 || (e.message && e.message.toLowerCase().includes('user rejected'))) {
+          toast('Transaction cancelled.', 'info');
+        } else {
+          toast('Payment error: ' + (e.message || 'Unknown error'), 'error');
+        }
       })
       .finally(function () {
         setLoading(false);
@@ -520,47 +612,68 @@
   }
 
   function switchOrAddChain(net) {
-    var hex = "0x" + net.chainId.toString(16);
-    return window.ethereum.request({ method: "wallet_switchEthereumChain", params: [{ chainId: hex }] })
+    var hex = '0x' + net.chainId.toString(16);
+    return window.ethereum
+      .request({ method: 'wallet_switchEthereumChain', params: [{ chainId: hex }] })
       .catch(function (e) {
         if (e.code === 4902) {
-          return window.ethereum.request({ method: "wallet_addEthereumChain", params: [{
-            chainId: hex, chainName: net.chainName, nativeCurrency: net.nativeCurrency,
-            rpcUrls: net.rpcUrls, blockExplorerUrls: net.blockExplorerUrls,
-          }] });
+          return window.ethereum.request({
+            method: 'wallet_addEthereumChain',
+            params: [{
+              chainId: hex,
+              chainName: net.chainName,
+              nativeCurrency: net.nativeCurrency,
+              rpcUrls: net.rpcUrls,
+              blockExplorerUrls: net.blockExplorerUrls,
+            }],
+          });
         }
         throw e;
       });
   }
 
-  // ── UI HELPERS ────────────────────────────────────────────
+  // ================================================================
+  // UI HELPERS
+  // ================================================================
   function val(id) {
     var el = document.getElementById(id);
-    return el ? el.value : "";
+    return el ? el.value.trim() : '';
+  }
+
+  function hide(id) {
+    var el = document.getElementById(id);
+    if (el) el.style.display = 'none';
   }
 
   function setLoading(on, msg) {
-    var o = document.getElementById("loading-overlay");
-    var t = document.getElementById("loading-text");
-    if (!o) return;
-    on ? o.classList.add("visible") : o.classList.remove("visible");
-    if (t && msg) t.textContent = msg;
+    var overlay = document.getElementById('loading-overlay');
+    var text    = document.getElementById('loading-text');
+    if (!overlay) return;
+    overlay.classList.toggle('visible', !!on);
+    if (text && msg) text.textContent = msg;
   }
 
-  function showToast(msg, type, ms) {
-    var c = document.getElementById("toast-container");
-    if (!c) return;
-    var t = document.createElement("div");
-    t.className   = "toast " + (type || "info");
+  function toast(msg, type, ms) {
+    var container = document.getElementById('toast-container');
+    if (!container) return;
+    var t = document.createElement('div');
+    t.className   = 'toast toast-' + (type || 'info');
     t.textContent = msg;
-    c.appendChild(t);
+    container.appendChild(t);
+    // Trigger entrance
+    requestAnimationFrame(function () { t.classList.add('toast-enter'); });
     setTimeout(function () {
-      t.style.cssText += "transition:opacity .4s,transform .4s;opacity:0;transform:translateX(20px)";
-      setTimeout(function () { t.parentNode && t.parentNode.removeChild(t); }, 400);
+      t.classList.remove('toast-enter');
+      t.classList.add('toast-exit');
+      setTimeout(function () {
+        if (t.parentNode) t.parentNode.removeChild(t);
+      }, 300);
     }, ms || 4000);
   }
 
-  // ── EXPOSE TO window ──────────────────────────────────────
+  // ================================================================
+  // EXPOSE TO HTML onclick attributes
+  // ================================================================
   window.showScreen        = showScreen;
   window.showAuth          = showAuth;
   window.toggleAuthMode    = toggleAuthMode;
