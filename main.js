@@ -6,9 +6,9 @@
     groqKey:      "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",
     groqModel:    "qwen/qwen3-32b",
     receiver:     "0xfF82D591F726eF56313EF958Bb7d7D85866C4E8B",
-    costPerDoc:   0.50,
-    topupCredits: 10,
-    topupUsdt:    "5",
+    costPerDoc:   0.50,   // dollars
+    topupCredits: 10.00,  // dollars added per topup
+    topupUsdt:    "5",    // USDT cost
     networks: {
       polygon: {
         chainId: 137, chainName: "Polygon Mainnet",
@@ -46,11 +46,15 @@
   document.addEventListener("DOMContentLoaded", function () {
     db = window.supabase.createClient(CFG.sbUrl, CFG.sbKey);
 
+    // Capture referral code from URL before anything else
+    captureReferralCode();
+
     db.auth.getSession().then(function (res) {
       var session = res && res.data && res.data.session;
       if (session && session.user) {
         currentUser = session.user;
-        ensureProfile().then(function () { showScreen("dashboard"); });
+        // Profile already exists for returning users
+        showScreen("dashboard");
       } else {
         showScreen("landing");
       }
@@ -81,7 +85,26 @@
         showToast("File loaded: " + f.name, "info");
       });
     }
+
+    // Populate affiliate link on dashboard
+    populateAffiliateLink();
   });
+
+  // ── REFERRAL CODE CAPTURE ────────────────────────────────
+  function captureReferralCode() {
+    var params = new URLSearchParams(window.location.search);
+    var ref    = params.get("ref");
+    if (ref) {
+      sessionStorage.setItem("ds_ref", ref);
+      // Clean URL without reloading
+      var clean = window.location.pathname;
+      window.history.replaceState({}, document.title, clean);
+    }
+  }
+
+  function getReferralCode() {
+    return sessionStorage.getItem("ds_ref") || null;
+  }
 
   function clearFile() {
     selectedFile = null;
@@ -99,7 +122,10 @@
       if (s === name) { el.classList.remove("screen-hidden"); }
       else            { el.classList.add("screen-hidden"); }
     });
-    if (name === "dashboard") updateBalanceDisplay();
+    if (name === "dashboard") {
+      updateBalanceDisplay();
+      populateAffiliateLink();
+    }
   }
 
   function showAuth(mode) {
@@ -114,23 +140,61 @@
     if (su) su.style.display = mode === "signup" ? "block" : "none";
   }
 
+  // ── AFFILIATE LINK UI ─────────────────────────────────────
+  function populateAffiliateLink() {
+    if (!currentUser) return;
+    var el = document.getElementById("affiliate-link-display");
+    if (!el) return;
+
+    db.from("profiles")
+      .select("affiliate_id")
+      .eq("id", currentUser.id)
+      .single()
+      .then(function (r) {
+        if (r.data && r.data.affiliate_id) {
+          var link = window.location.origin + window.location.pathname + "?ref=" + r.data.affiliate_id;
+          el.value  = link;
+          el.title  = link;
+        }
+      });
+  }
+
+  function copyAffiliateLink() {
+    var el = document.getElementById("affiliate-link-display");
+    if (!el) return;
+    navigator.clipboard.writeText(el.value).then(function () {
+      showToast("Affiliate link copied! Earn $5 per referral.", "success");
+    }).catch(function () {
+      el.select();
+      document.execCommand("copy");
+      showToast("Link copied!", "success");
+    });
+  }
+
   // ── AUTH ──────────────────────────────────────────────────
   function handleSignUp() {
-    var em = val("signup-email");
-    var pw = val("signup-password");
+    var em  = val("signup-email");
+    var pw  = val("signup-password");
     if (!em || !pw)    return showToast("Email and password required.", "error");
     if (pw.length < 6) return showToast("Password needs 6+ characters.", "error");
 
+    var ref  = getReferralCode();
+    var meta = ref ? { ref: ref } : {};
+
     setLoading(true, "Creating your account...");
-    db.auth.signUp({ email: em.trim(), password: pw })
+    db.auth.signUp({
+      email: em.trim(),
+      password: pw,
+      options: { data: meta }    // passed to raw_user_meta_data → trigger picks it up
+    })
       .then(function (r) {
         if (r.error) throw r.error;
         if (r.data && r.data.user) {
           currentUser = r.data.user;
-          return ensureProfile().then(function () {
-            showToast("Welcome! 10 free credits added.", "success");
-            showScreen("dashboard");
-          });
+          sessionStorage.removeItem("ds_ref"); // consume referral code
+          showToast("Welcome! $5.00 free credit added. Start generating!", "success");
+          showScreen("dashboard");
+          return;
         }
         showToast("Check your email to confirm your account.", "info");
       })
@@ -148,10 +212,8 @@
       .then(function (r) {
         if (r.error) throw r.error;
         currentUser = r.data.user;
-        return ensureProfile().then(function () {
-          showToast("Welcome back!", "success");
-          showScreen("dashboard");
-        });
+        showToast("Welcome back!", "success");
+        showScreen("dashboard");
       })
       .catch(function (e) { showToast(e.message || "Login failed.", "error"); })
       .finally(function () { setLoading(false); });
@@ -168,23 +230,6 @@
     });
   }
 
-  function ensureProfile() {
-    if (!currentUser) return Promise.resolve();
-    return db.from("profiles")
-      .select("id")
-      .eq("id", currentUser.id)
-      .maybeSingle()
-      .then(function (r) {
-        if (r.error || !r.data) {
-          return db.from("profiles").insert([{
-            id:      currentUser.id,
-            email:   currentUser.email,
-            credits: Number(10),
-          }]);
-        }
-      });
-  }
-
   // ── BALANCE ───────────────────────────────────────────────
   function updateBalanceDisplay() {
     if (!currentUser) return;
@@ -193,74 +238,27 @@
       .eq("id", currentUser.id)
       .single()
       .then(function (r) {
-        if (r.data) {
-          var el = document.getElementById("balance");
-          if (el) el.textContent = Number(r.data.credits).toFixed(2);
-        }
+        if (r.data) setBalanceEl(r.data.credits);
       });
   }
 
-  function getCredits() {
-    return db.from("profiles")
-      .select("credits")
-      .eq("id", currentUser.id)
-      .single()
-      .then(function (r) {
-        if (r.error) {
-          console.error("getCredits error:", r.error);
-          console.table(r.error);
-          throw new Error("Could not fetch credits: " + r.error.message);
-        }
-        return Number(r.data.credits);
-      });
+  function setBalanceEl(val) {
+    var el = document.getElementById("balance");
+    if (el) el.textContent = Number(val).toFixed(2);
   }
 
-  // ── FIX: credits sent as strict Number, id matched via currentUser.id ──
+  // ── CREDIT OPS via RPC (bypasses RLS safely) ─────────────
   function deductCredits(amount) {
-    return getCredits().then(function (current) {
-      // Strict Number cast — prevents type mismatch 400 errors
-      var newBalance = Number(parseFloat((current - amount).toFixed(2)));
-
-      console.log("[deductCredits] user id:", currentUser.id, "| current:", current, "| new:", newBalance);
-
-      return db
-        .from("profiles")
-        .update({ credits: newBalance })
-        .eq("id", currentUser.id)
-        .select()          // forces Supabase to return the updated row
-        .then(function (r) {
-          if (r.error) {
-            console.error("[deductCredits] UPDATE failed:", r.error);
-            console.table(r.error);
-            throw new Error("Credit update failed (" + r.error.code + "): " + r.error.message);
-          }
-          console.log("[deductCredits] UPDATE success, returned row:", r.data);
-          return newBalance;
-        });
+    return db.rpc("deduct_credits", { p_amount: amount }).then(function (r) {
+      if (r.error) throw new Error(r.error.message);
+      return r.data;
     });
   }
 
-  // same pattern for topup inside payWithUSDT
   function addCredits(amount) {
-    return getCredits().then(function (current) {
-      var newBalance = Number(parseFloat((current + amount).toFixed(2)));
-
-      console.log("[addCredits] user id:", currentUser.id, "| current:", current, "| new:", newBalance);
-
-      return db
-        .from("profiles")
-        .update({ credits: newBalance })
-        .eq("id", currentUser.id)
-        .select()
-        .then(function (r) {
-          if (r.error) {
-            console.error("[addCredits] UPDATE failed:", r.error);
-            console.table(r.error);
-            throw new Error("Credit update failed (" + r.error.code + "): " + r.error.message);
-          }
-          console.log("[addCredits] UPDATE success, returned row:", r.data);
-          return newBalance;
-        });
+    return db.rpc("add_credits", { p_amount: amount }).then(function (r) {
+      if (r.error) throw new Error(r.error.message);
+      return r.data;
     });
   }
 
@@ -270,14 +268,19 @@
     if (!selectedFile) return showToast("Upload a code file first.", "error");
     var sendBtn = document.getElementById("send-btn");
 
-    getCredits()
-      .then(function (credits) {
-        if (credits < CFG.costPerDoc)
-          throw new Error("Insufficient credits ($" + CFG.costPerDoc + " needed). Top up with USDT.");
+    // Check credits first
+    db.from("profiles")
+      .select("credits")
+      .eq("id", currentUser.id)
+      .single()
+      .then(function (r) {
+        if (!r.data || Number(r.data.credits) < CFG.costPerDoc) {
+          throw new Error("Insufficient balance ($" + CFG.costPerDoc.toFixed(2) + " needed). Top up with USDT.");
+        }
         return selectedFile.text();
       })
       .then(function (code) {
-        setLoading(true, "Analyzing code with Qwen-32B...");
+        setLoading(true, "Analyzing code with Qwen2.5-32B...");
         if (sendBtn) sendBtn.disabled = true;
 
         var instr   = val("message-input") || "";
@@ -286,10 +289,11 @@
           "You are a world-class Senior Technical Writer and Software Architect.",
           "Generate an exceptional professional README.md for the provided code.",
           "- Use professional emojis at the start of each major section heading.",
-          "- Include: Overview, ✨ Features, 🚀 Quick Start, 📦 Installation, 🏗 Architecture,",
+          "- Include: 🧠 Overview, ✨ Features, 🚀 Quick Start, 📦 Installation, 🏗 Architecture,",
           "  🛠 Tech Stack (Markdown table: Technology | Version | Purpose),",
           "  📡 API Reference (if applicable), 🤝 Contributing, 📄 License.",
-          "- Explain the architecture deeply, as a Senior Engineer would.",
+          "- Go deep on architecture: explain data flow, module relationships, design patterns.",
+          "- Write as a Principal Engineer reviewing this codebase — be precise and insightful.",
           "- Output ONLY raw Markdown — no preamble, no wrapper code fences.",
         ].join("\n");
         var usr = (instr ? "Special Instructions: " + instr + "\n\n" : "")
@@ -302,7 +306,7 @@
             "Authorization": "Bearer " + CFG.groqKey,
           },
           body: JSON.stringify({
-            model: CFG.groqModel, temperature: 0.6, max_tokens: 4096,
+            model: CFG.groqModel, temperature: 0.5, max_tokens: 4096,
             messages: [
               { role: "system", content: sys },
               { role: "user",   content: usr },
@@ -322,18 +326,17 @@
         if (!text) throw new Error("AI returned an empty response. Please try again.");
 
         return deductCredits(CFG.costPerDoc).then(function (newBalance) {
-          var el = document.getElementById("balance");
-          if (el) el.textContent = Number(newBalance).toFixed(2);
+          setBalanceEl(newBalance);
 
           db.from("transactions").insert([{
             user_id:     currentUser.id,
             type:        "debit",
             amount:      Number(CFG.costPerDoc),
-            description: "README for: " + selectedFile.name,
+            description: "README generated for: " + selectedFile.name,
           }]);
 
           renderResult(text, selectedFile.name);
-          showToast("README generated! $" + CFG.costPerDoc + " deducted.", "success");
+          showToast("README generated! $" + CFG.costPerDoc.toFixed(2) + " deducted.", "success");
         });
       })
       .catch(function (e) {
@@ -391,7 +394,7 @@
     chat.innerHTML =
       '<div class="result-card">' +
         '<div class="result-header">' +
-          '<span class="result-tag">✅ POWERED BY QWEN-32B</span>' +
+          '<span class="result-tag">✅ POWERED BY QWEN2.5-32B</span>' +
           '<span style="font-family:var(--mono);font-size:.7rem;color:var(--muted)">' + esc(filename) + '</span>' +
         '</div>' +
         '<div class="result-body">' + renderMarkdown(readmeText) + '</div>' +
@@ -475,7 +478,7 @@
         return contract.balanceOf(walletAddr).then(function (bal) {
           if (bal < sendAmt) {
             var h = parseFloat(ethers.formatUnits(bal, ctx.net.usdtDecimals)).toFixed(2);
-            throw new Error("Insufficient USDT. Have " + h + ", need " + CFG.topupUsdt + ".");
+            throw new Error("Insufficient USDT. Have $" + h + ", need $" + CFG.topupUsdt + ".");
           }
           setLoading(true, "Waiting for MetaMask approval...");
           showToast("Confirm the transaction in MetaMask.", "info");
@@ -494,14 +497,13 @@
             user_id:     currentUser.id,
             type:        "topup",
             amount:      Number(CFG.topupCredits),
-            description: "USDT top-up via " + ctx.netKey,
+            description: "USDT top-up via " + ctx.netKey + " — " + CFG.topupUsdt + " USDT",
             tx_hash:     ctx.receipt.hash,
           }]);
-          var el = document.getElementById("balance");
-          if (el) el.textContent = Number(newBalance).toFixed(2);
+          setBalanceEl(newBalance);
           var badge = document.getElementById("wallet-badge");
           if (badge) badge.textContent = walletAddr.slice(0,6)+"..."+walletAddr.slice(-4)+" ✓";
-          showToast("Payment confirmed! +" + CFG.topupCredits + " credits.", "success");
+          showToast("Payment confirmed! +$" + CFG.topupCredits.toFixed(2) + " credits.", "success");
         });
       })
       .catch(function (e) {
@@ -559,13 +561,14 @@
   }
 
   // ── EXPOSE TO window ──────────────────────────────────────
-  window.showScreen     = showScreen;
-  window.showAuth       = showAuth;
-  window.toggleAuthMode = toggleAuthMode;
-  window.handleSignUp   = handleSignUp;
-  window.handleSignIn   = handleSignIn;
-  window.handleSignOut  = handleSignOut;
-  window.payWithUSDT    = payWithUSDT;
-  window.generateReadme = generateReadme;
+  window.showScreen        = showScreen;
+  window.showAuth          = showAuth;
+  window.toggleAuthMode    = toggleAuthMode;
+  window.handleSignUp      = handleSignUp;
+  window.handleSignIn      = handleSignIn;
+  window.handleSignOut     = handleSignOut;
+  window.payWithUSDT       = payWithUSDT;
+  window.generateReadme    = generateReadme;
+  window.copyAffiliateLink = copyAffiliateLink;
 
 }());
