@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>DS // AUTO-DOC ENGINE</title>
+  <title>DS // AUTO-DOC ENGINE — README in 12 Seconds</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Syne:wght@400;700;800;900&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
@@ -22,6 +22,7 @@
       --cyan2:    #0085cc;
       --green:    #00ff88;
       --red:      #ff4466;
+      --orange:   #ff9a3c;
       --txt:      #e2eaf5;
       --muted:    #5a7299;
       --mono:     'Space Mono', monospace;
@@ -29,7 +30,6 @@
     }
 
     html { scroll-behavior: smooth; }
-
     body {
       font-family: var(--sans);
       background: var(--bg);
@@ -38,7 +38,6 @@
       overflow-x: hidden;
     }
 
-    /* ============ SCROLLBAR ============ */
     ::-webkit-scrollbar { width: 4px; }
     ::-webkit-scrollbar-track { background: var(--bg); }
     ::-webkit-scrollbar-thumb { background: var(--cyan2); border-radius: 2px; }
@@ -47,10 +46,8 @@
     .noise-overlay {
       position: fixed; inset: 0; pointer-events: none; z-index: 0;
       background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
-      background-size: 200px;
-      opacity: 0.5;
+      background-size: 200px; opacity: 0.5;
     }
-
     .grid-bg {
       position: fixed; inset: 0; pointer-events: none; z-index: 0;
       background-image:
@@ -58,20 +55,12 @@
         linear-gradient(90deg, rgba(0,195,255,0.03) 1px, transparent 1px);
       background-size: 60px 60px;
     }
-
-    .glow-orb {
-      position: fixed; border-radius: 50%;
-      filter: blur(120px); pointer-events: none; z-index: 0;
-    }
+    .glow-orb { position: fixed; border-radius: 50%; filter: blur(120px); pointer-events: none; z-index: 0; }
     .orb1 { width: 600px; height: 600px; top: -200px; left: -200px; background: rgba(0,195,255,0.06); }
     .orb2 { width: 500px; height: 500px; bottom: -150px; right: -150px; background: rgba(0,133,255,0.07); }
 
     /* ============ SHARED UTILS ============ */
-    .glass {
-      background: var(--card);
-      backdrop-filter: blur(16px);
-      border: 1px solid var(--border);
-    }
+    .glass { background: var(--card); backdrop-filter: blur(16px); border: 1px solid var(--border); }
 
     .btn-primary {
       display: inline-flex; align-items: center; justify-content: center; gap: 8px;
@@ -81,7 +70,6 @@
       transition: all 0.2s; position: relative; overflow: hidden;
     }
     .btn-primary:hover { background: #33d4ff; transform: translateY(-2px); box-shadow: 0 8px 30px rgba(0,195,255,0.3); }
-    .btn-primary:active { transform: translateY(0); }
 
     .btn-ghost {
       display: inline-flex; align-items: center; justify-content: center; gap: 8px;
@@ -100,17 +88,14 @@
     }
 
     /* ============ SCREENS ============ */
-    #landing-screen, #auth-screen, #dashboard-screen {
-      position: relative; z-index: 10;
-    }
+    #landing-screen, #auth-screen, #dashboard-screen { position: relative; z-index: 10; }
     .screen-hidden { display: none !important; }
 
     /* ============ NAV ============ */
     nav {
       position: fixed; top: 0; left: 0; right: 0; z-index: 100;
       padding: 16px 24px;
-      background: rgba(4, 8, 16, 0.85);
-      backdrop-filter: blur(20px);
+      background: rgba(4, 8, 16, 0.85); backdrop-filter: blur(20px);
       border-bottom: 1px solid var(--border);
       display: flex; align-items: center; justify-content: space-between;
     }
@@ -123,36 +108,61 @@
 
     .hero {
       display: flex; flex-direction: column; align-items: center; justify-content: center;
-      text-align: center; padding: 80px 24px 60px;
+      text-align: center; padding: 90px 24px 60px;
       min-height: calc(100vh - 80px);
     }
 
-    .hero-tag { margin-bottom: 32px; }
+    .hero-eyebrow {
+      display: flex; align-items: center; gap: 12px; margin-bottom: 36px;
+      font-family: var(--mono); font-size: 0.7rem; color: var(--orange);
+      letter-spacing: 0.15em; text-transform: uppercase;
+    }
+    .hero-eyebrow::before, .hero-eyebrow::after {
+      content: ''; width: 40px; height: 1px; background: var(--orange); opacity: 0.4;
+    }
 
     .hero-title {
-      font-size: clamp(2.8rem, 8vw, 6.5rem);
-      font-weight: 900;
-      line-height: 0.95;
-      letter-spacing: -0.03em;
-      margin-bottom: 24px;
-      color: var(--txt);
+      font-size: clamp(2.6rem, 7.5vw, 6rem);
+      font-weight: 900; line-height: 0.95;
+      letter-spacing: -0.03em; margin-bottom: 12px; color: var(--txt);
     }
-    .hero-title .accent { color: var(--cyan); text-shadow: 0 0 40px rgba(0,195,255,0.4); }
-    .hero-title .line2 { display: block; color: var(--muted); font-size: 0.85em; }
+    .hero-title .accent { color: var(--cyan); text-shadow: 0 0 60px rgba(0,195,255,0.35); }
+    .hero-title .strike {
+      position: relative; color: var(--muted);
+    }
+    .hero-title .strike::after {
+      content: ''; position: absolute; left: 0; right: 0; top: 50%;
+      height: 3px; background: var(--red); transform: rotate(-2deg);
+    }
+
+    .hero-subhead {
+      font-size: clamp(1.4rem, 3vw, 2.2rem); font-weight: 800;
+      color: var(--green); margin-bottom: 28px; letter-spacing: -0.01em;
+    }
 
     .hero-sub {
-      font-family: var(--mono); font-size: 0.9rem; color: var(--muted);
-      max-width: 500px; line-height: 1.8; margin-bottom: 48px;
+      font-family: var(--mono); font-size: 0.88rem; color: var(--muted);
+      max-width: 560px; line-height: 1.9; margin-bottom: 48px;
     }
+    .hero-sub strong { color: var(--txt); }
 
     .hero-cta { display: flex; gap: 16px; flex-wrap: wrap; justify-content: center; }
 
-    .hero-stats {
-      display: flex; gap: 40px; margin-top: 80px; flex-wrap: wrap; justify-content: center;
+    /* Pain/Promise bar */
+    .pain-bar {
+      display: flex; gap: 0; flex-wrap: wrap; justify-content: center;
+      margin-top: 64px; border: 1px solid var(--border2); border-radius: 12px;
+      overflow: hidden; max-width: 760px; width: 100%;
     }
-    .stat { text-align: center; }
-    .stat-num { font-family: var(--mono); font-size: 2rem; font-weight: 700; color: var(--cyan); display: block; }
-    .stat-label { font-family: var(--mono); font-size: 0.65rem; color: var(--muted); letter-spacing: 0.15em; text-transform: uppercase; }
+    .pain-item {
+      flex: 1; min-width: 180px; padding: 20px 24px; border-right: 1px solid var(--border);
+      text-align: center;
+    }
+    .pain-item:last-child { border-right: none; }
+    .pain-before { font-family: var(--mono); font-size: 0.7rem; color: var(--red); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 4px; }
+    .pain-after  { font-family: var(--mono); font-size: 0.7rem; color: var(--green); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 4px; }
+    .pain-val    { font-size: 1.6rem; font-weight: 900; color: var(--txt); }
+    .pain-label  { font-family: var(--mono); font-size: 0.65rem; color: var(--muted); margin-top: 2px; }
 
     /* ============ DEMO PREVIEW ============ */
     .demo-section { padding: 60px 24px; max-width: 900px; margin: 0 auto; }
@@ -169,7 +179,7 @@
     .demo-dot { width: 10px; height: 10px; border-radius: 50%; }
     .demo-body { background: rgba(4,8,16,0.95); padding: 28px; font-family: var(--mono); font-size: 0.78rem; line-height: 2; }
     .demo-body .kw { color: var(--cyan); }
-    .demo-body .fn { color: #ff9a3c; }
+    .demo-body .fn { color: var(--orange); }
     .demo-body .str { color: var(--green); }
     .demo-body .cm { color: var(--muted); }
     .demo-body .cursor {
@@ -179,7 +189,10 @@
     @keyframes blink { 50% { opacity: 0; } }
 
     .arrow-down { text-align: center; padding: 20px; color: var(--muted); font-size: 1.5rem; }
-    .readme-preview { padding: 28px; background: var(--card); border: 1px solid var(--border); border-radius: 16px; max-width: 900px; margin: 0 auto 80px; }
+    .readme-preview {
+      padding: 28px; background: var(--card); border: 1px solid var(--border);
+      border-radius: 16px; max-width: 900px; margin: 0 auto 80px;
+    }
     .readme-preview h3 { font-family: var(--mono); color: var(--cyan); font-size: 1.1rem; margin-bottom: 16px; }
     .readme-line { height: 8px; border-radius: 4px; margin-bottom: 10px; background: rgba(255,255,255,0.06); animation: shimmer 2s infinite; }
     @keyframes shimmer { 0%,100% { opacity: 0.4; } 50% { opacity: 0.9; } }
@@ -189,18 +202,49 @@
     .readme-line.w-40 { width: 40%; }
     .readme-line.cyan { background: rgba(0,195,255,0.2); height: 16px; width: 30%; margin-bottom: 16px; }
 
-    /* ============ FEATURES ============ */
-    .features-section { padding: 80px 24px; max-width: 1100px; margin: 0 auto; }
+    /* ============ WHY BETTER SECTION ============ */
+    .why-section { padding: 80px 24px; max-width: 1100px; margin: 0 auto; }
     .section-header { text-align: center; margin-bottom: 60px; }
     .section-title { font-size: clamp(1.8rem, 4vw, 3rem); font-weight: 900; margin: 12px 0; }
     .section-sub { font-family: var(--mono); color: var(--muted); font-size: 0.85rem; }
 
+    .compare-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+    @media (max-width: 680px) { .compare-grid { grid-template-columns: 1fr; } }
+
+    .compare-card {
+      border-radius: 16px; padding: 32px;
+      background: var(--card); border: 1px solid var(--border);
+    }
+    .compare-card.winner {
+      border-color: var(--cyan);
+      box-shadow: 0 0 40px rgba(0,195,255,0.08);
+      background: rgba(0,195,255,0.04);
+    }
+    .compare-label {
+      font-family: var(--mono); font-size: 0.65rem; letter-spacing: 0.15em;
+      text-transform: uppercase; margin-bottom: 16px; display: block;
+    }
+    .compare-label.bad { color: var(--red); }
+    .compare-label.good { color: var(--green); }
+    .compare-title { font-size: 1.15rem; font-weight: 800; margin-bottom: 16px; }
+    .compare-points { list-style: none; }
+    .compare-points li {
+      font-family: var(--mono); font-size: 0.78rem; color: var(--muted);
+      padding: 8px 0; border-bottom: 1px solid var(--border); display: flex; gap: 10px;
+    }
+    .compare-points li:last-child { border-bottom: none; }
+    .compare-points li .ico { flex-shrink: 0; }
+
+    /* ============ FEATURES ============ */
+    .features-section { padding: 80px 24px; max-width: 1100px; margin: 0 auto; }
     .features-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 24px; }
     .feature-card {
       border-radius: 16px; padding: 32px;
       background: var(--card); border: 1px solid var(--border);
       transition: all 0.3s; position: relative; overflow: hidden;
+      opacity: 0; transform: translateY(20px);
     }
+    .feature-card.visible { opacity: 1; transform: translateY(0); transition: opacity 0.5s, transform 0.5s; }
     .feature-card::before {
       content: ''; position: absolute; inset: 0; opacity: 0;
       background: radial-gradient(circle at 50% 0%, rgba(0,195,255,0.08), transparent 70%);
@@ -211,6 +255,21 @@
     .feature-icon { font-size: 1.8rem; margin-bottom: 16px; display: block; }
     .feature-title { font-size: 1.1rem; font-weight: 800; margin-bottom: 10px; }
     .feature-desc { font-family: var(--mono); font-size: 0.78rem; color: var(--muted); line-height: 1.8; }
+
+    /* ============ AFFILIATE SECTION ============ */
+    .affiliate-section { padding: 80px 24px; max-width: 700px; margin: 0 auto; }
+    .affiliate-card {
+      border-radius: 24px; padding: 48px;
+      background: rgba(0,255,136,0.03); border: 1px solid rgba(0,255,136,0.2);
+      text-align: center; position: relative; overflow: hidden;
+    }
+    .affiliate-card::after {
+      content: ''; position: absolute; top: -1px; left: 20%; right: 20%; height: 2px;
+      background: linear-gradient(90deg, transparent, var(--green), transparent);
+    }
+    .affiliate-title { font-size: 2rem; font-weight: 900; margin: 16px 0 8px; }
+    .affiliate-sub { font-family: var(--mono); color: var(--muted); font-size: 0.82rem; margin-bottom: 32px; line-height: 1.8; }
+    .affiliate-amount { font-family: var(--mono); font-size: 3.5rem; font-weight: 700; color: var(--green); line-height: 1; }
 
     /* ============ PRICING ============ */
     .pricing-section { padding: 80px 24px; max-width: 700px; margin: 0 auto; }
@@ -227,19 +286,21 @@
     .pricing-price { font-family: var(--mono); font-size: 3.5rem; font-weight: 700; color: var(--cyan); line-height: 1; margin: 24px 0 8px; }
     .pricing-sub { font-family: var(--mono); color: var(--muted); font-size: 0.8rem; margin-bottom: 32px; }
     .pricing-features { list-style: none; text-align: left; margin-bottom: 40px; }
-    .pricing-features li { font-family: var(--mono); font-size: 0.82rem; padding: 10px 0; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 12px; }
+    .pricing-features li {
+      font-family: var(--mono); font-size: 0.82rem; padding: 10px 0;
+      border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 12px;
+    }
     .pricing-features li:last-child { border-bottom: none; }
     .pricing-features li .check { color: var(--green); }
 
     /* ============ AUTH SCREEN ============ */
     #auth-screen {
-      min-height: 100vh; display: flex; align-items: center; justify-content: center;
-      padding: 24px;
+      min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 24px;
     }
     .auth-card { width: 100%; max-width: 420px; border-radius: 24px; padding: 48px 40px; }
-
-    .auth-logo { font-family: var(--mono); font-size: 1.2rem; font-weight: 700; color: var(--cyan); letter-spacing: 0.1em; text-align: center; margin-bottom: 40px; }
+    .auth-logo { font-family: var(--mono); font-size: 1.2rem; font-weight: 700; color: var(--cyan); letter-spacing: 0.1em; text-align: center; margin-bottom: 12px; }
     .auth-logo span { color: var(--txt); }
+    .auth-tagline { font-family: var(--mono); font-size: 0.72rem; color: var(--muted); text-align: center; margin-bottom: 32px; line-height: 1.6; }
 
     .form-group { margin-bottom: 16px; }
     .form-input {
@@ -262,14 +323,19 @@
       background: rgba(0,255,136,0.06); border: 1px solid rgba(0,255,136,0.2);
       border-radius: 10px; padding: 14px 16px;
       font-family: var(--mono); font-size: 0.75rem; color: rgba(0,255,136,0.8);
-      display: flex; gap: 10px; align-items: flex-start; margin-top: 20px;
+      display: flex; gap: 10px; align-items: flex-start; margin-top: 20px; line-height: 1.7;
     }
 
-    /* ============ DASHBOARD ============ */
-    #dashboard-screen {
-      min-height: 100vh; display: flex; flex-direction: column;
-      padding: 80px 0 0;
+    .ref-notice {
+      background: rgba(0,195,255,0.06); border: 1px solid var(--border2);
+      border-radius: 10px; padding: 12px 16px;
+      font-family: var(--mono); font-size: 0.72rem; color: var(--cyan);
+      display: none; gap: 10px; align-items: center; margin-top: 12px;
     }
+    .ref-notice.visible { display: flex; }
+
+    /* ============ DASHBOARD ============ */
+    #dashboard-screen { min-height: 100vh; display: flex; flex-direction: column; padding: 80px 0 0; }
 
     .dash-header {
       position: fixed; top: 0; left: 0; right: 0; z-index: 100;
@@ -278,9 +344,7 @@
       padding: 12px 20px;
       display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
     }
-
     .dash-logo { font-family: var(--mono); font-size: 0.9rem; font-weight: 700; color: var(--cyan); letter-spacing: 0.08em; white-space: nowrap; }
-
     .dash-controls { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 
     .balance-badge {
@@ -288,14 +352,12 @@
       border-radius: 8px; padding: 8px 16px;
       font-family: var(--mono); font-size: 0.8rem; color: var(--cyan); white-space: nowrap;
     }
-
     .wallet-badge {
       background: rgba(0,255,136,0.06); border: 1px solid rgba(0,255,136,0.2);
       border-radius: 8px; padding: 8px 14px;
       font-family: var(--mono); font-size: 0.7rem; color: rgba(0,255,136,0.8);
       max-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
     }
-
     .topup-wrap { display: flex; align-items: center; gap: 6px; }
     .network-select {
       background: rgba(0,0,0,0.5); border: 1px solid var(--border); color: var(--txt);
@@ -317,7 +379,7 @@
     }
     .btn-signout:hover { background: rgba(255,68,102,0.2); }
 
-    /* MAIN AREA */
+    /* MAIN */
     .dash-main {
       flex: 1; display: flex; flex-direction: column;
       max-width: 900px; width: 100%; margin: 0 auto; padding: 20px;
@@ -336,6 +398,31 @@
     .empty-title { font-family: var(--mono); font-size: 0.85rem; color: var(--muted); line-height: 2; }
     .empty-cost { color: var(--cyan); font-weight: 700; }
 
+    /* Affiliate panel in dashboard */
+    .affiliate-panel {
+      background: rgba(0,255,136,0.04); border: 1px solid rgba(0,255,136,0.15);
+      border-radius: 12px; padding: 16px 20px;
+      margin-bottom: 16px; font-family: var(--mono);
+    }
+    .affiliate-panel-title {
+      font-size: 0.7rem; color: var(--green); letter-spacing: 0.12em; text-transform: uppercase;
+      margin-bottom: 10px; display: flex; align-items: center; gap: 8px;
+    }
+    .affiliate-input-row { display: flex; gap: 8px; }
+    .affiliate-link-input {
+      flex: 1; background: rgba(0,0,0,0.4); border: 1px solid var(--border);
+      border-radius: 8px; padding: 10px 14px;
+      font-family: var(--mono); font-size: 0.72rem; color: var(--muted);
+      outline: none; cursor: text;
+    }
+    .btn-copy-link {
+      background: rgba(0,255,136,0.12); border: 1px solid rgba(0,255,136,0.25);
+      color: var(--green); font-family: var(--mono); font-size: 0.7rem;
+      padding: 10px 14px; border-radius: 8px; cursor: pointer; white-space: nowrap;
+      transition: all 0.2s;
+    }
+    .btn-copy-link:hover { background: rgba(0,255,136,0.2); }
+
     /* RESULT CARD */
     .result-card {
       border-radius: 16px; border: 1px solid var(--border2);
@@ -352,16 +439,21 @@
     .result-body { padding: 28px; }
     .result-body h1 { font-size: 1.6rem; font-weight: 900; color: var(--cyan); margin-bottom: 20px; }
     .result-body h2 { font-size: 1.1rem; font-weight: 800; color: #a0c4e8; margin: 24px 0 10px; border-bottom: 1px solid var(--border); padding-bottom: 6px; }
+    .result-body h3 { font-size: 0.95rem; font-weight: 800; color: var(--txt); margin: 18px 0 8px; }
     .result-body p { font-family: var(--mono); font-size: 0.8rem; color: var(--muted); line-height: 1.9; margin-bottom: 12px; }
     .result-body strong { color: var(--txt); }
-    .result-body code { background: rgba(0,0,0,0.5); color: #ff9a3c; padding: 2px 6px; border-radius: 4px; font-family: var(--mono); font-size: 0.75rem; }
+    .result-body code { background: rgba(0,0,0,0.5); color: var(--orange); padding: 2px 6px; border-radius: 4px; font-family: var(--mono); font-size: 0.75rem; }
     .result-body pre { background: rgba(0,0,0,0.7); border: 1px solid var(--border); border-radius: 10px; padding: 20px; overflow-x: auto; font-family: var(--mono); font-size: 0.75rem; color: var(--green); line-height: 1.8; margin: 16px 0; }
     .result-body table { width: 100%; border-collapse: collapse; font-family: var(--mono); font-size: 0.78rem; margin: 16px 0; }
     .result-body th { background: rgba(0,195,255,0.08); color: var(--cyan); padding: 10px 14px; text-align: left; border: 1px solid var(--border); }
     .result-body td { padding: 8px 14px; border: 1px solid var(--border); color: var(--muted); }
+    .result-body ul { padding-left: 0; margin-bottom: 12px; }
+    .result-body li { font-family: var(--mono); font-size: 0.8rem; color: var(--muted); line-height: 1.9; list-style: none; padding-left: 16px; position: relative; }
+    .result-body li::before { content: '▸'; position: absolute; left: 0; color: var(--cyan); }
+    .result-body blockquote { border-left: 3px solid var(--cyan); padding-left: 16px; margin: 12px 0; color: var(--muted); font-style: italic; }
 
     .btn-download {
-      width: 100%; margin-top: 24px;
+      width: 100%; margin-top: 0;
       background: var(--cyan); color: #000;
       font-family: var(--mono); font-weight: 700; font-size: 0.8rem; letter-spacing: 0.1em;
       padding: 16px; border-radius: 10px; border: none; cursor: pointer;
@@ -434,55 +526,50 @@
       background: var(--card); border: 1px solid var(--border2);
       border-radius: 10px; padding: 14px 18px;
       font-family: var(--mono); font-size: 0.78rem; max-width: 300px;
-      backdrop-filter: blur(16px);
-      animation: toastIn 0.3s ease-out;
-      pointer-events: all;
+      backdrop-filter: blur(16px); animation: toastIn 0.3s ease-out; pointer-events: all;
     }
     .toast.success { border-color: rgba(0,255,136,0.3); color: var(--green); }
-    .toast.error { border-color: rgba(255,68,102,0.3); color: var(--red); }
-    .toast.info { border-color: var(--border2); color: var(--cyan); }
+    .toast.error   { border-color: rgba(255,68,102,0.3); color: var(--red); }
+    .toast.info    { border-color: var(--border2); color: var(--cyan); }
     @keyframes toastIn { from { opacity: 0; transform: translateX(20px); } to { opacity: 1; transform: translateX(0); } }
 
-    /* ============ FOOTER ============ */
+    /* FOOTER */
     .landing-footer {
       text-align: center; padding: 40px 24px;
       border-top: 1px solid var(--border);
       font-family: var(--mono); font-size: 0.72rem; color: var(--muted);
     }
 
-    /* ============ RESPONSIVE ============ */
+    /* RESPONSIVE */
     @media (max-width: 640px) {
       .nav-actions .btn-primary { padding: 10px 18px; font-size: 0.72rem; }
-      .hero { padding: 60px 20px 40px; }
       .auth-card { padding: 36px 28px; }
       .dash-controls { gap: 8px; }
-      .pricing-card { padding: 36px 28px; }
+      .pricing-card, .affiliate-card { padding: 36px 28px; }
+      .pain-bar { flex-direction: column; }
+      .pain-item { border-right: none; border-bottom: 1px solid var(--border); }
+      .pain-item:last-child { border-bottom: none; }
     }
 
-    /* ============ ENTRANCE ANIMATIONS ============ */
+    /* ENTRANCE ANIMATIONS */
     .fade-in { opacity: 0; transform: translateY(24px); animation: fadeIn 0.7s ease-out forwards; }
     .fade-in:nth-child(1) { animation-delay: 0.1s; }
     .fade-in:nth-child(2) { animation-delay: 0.2s; }
     .fade-in:nth-child(3) { animation-delay: 0.3s; }
     .fade-in:nth-child(4) { animation-delay: 0.4s; }
+    .fade-in:nth-child(5) { animation-delay: 0.5s; }
     @keyframes fadeIn { to { opacity: 1; transform: translateY(0); } }
-
-    .feature-card { opacity: 0; transform: translateY(20px); transition: opacity 0.5s, transform 0.5s; }
-    .feature-card.visible { opacity: 1; transform: translateY(0); }
   </style>
 </head>
 <body>
 
-<!-- BG EFFECTS -->
 <div class="noise-overlay"></div>
 <div class="grid-bg"></div>
 <div class="glow-orb orb1"></div>
 <div class="glow-orb orb2"></div>
 
-<!-- TOAST -->
 <div id="toast-container"></div>
 
-<!-- LOADING OVERLAY -->
 <div id="loading-overlay" class="loading-overlay">
   <div class="spinner"></div>
   <p class="loading-text" id="loading-text">Generating Documentation...</p>
@@ -494,30 +581,53 @@
     <span class="nav-logo">DS // <span>AUTO-DOC</span></span>
     <div class="nav-actions">
       <button class="btn-ghost" onclick="showAuth('signin')">Login</button>
-      <button class="btn-primary" onclick="showAuth('signup')"><i class="fas fa-bolt"></i> Get Started Free</button>
+      <button class="btn-primary" onclick="showAuth('signup')"><i class="fas fa-bolt"></i> Start Free</button>
     </div>
   </nav>
 
   <section class="hero">
-    <div class="hero-tag fade-in"><span class="tag">⚡ AI-Powered Documentation Engine</span></div>
+    <div class="hero-eyebrow fade-in">Stop writing documentation by hand</div>
+
     <h1 class="hero-title fade-in">
-      <span class="accent">TURN CODE</span>
-      <span class="line2">INTO DOCS IN SECONDS</span>
+      <span class="strike">2 Hours</span><br>
+      → <span class="accent">12 Seconds.</span>
     </h1>
+
+    <h2 class="hero-subhead fade-in">Senior-Level READMEs. Zero Effort.</h2>
+
     <p class="hero-sub fade-in">
-      Drop your source code. Our Qwen-32B AI analyzes every line and generates a professional,
-      senior-engineer-level README.md — complete with architecture, API docs, and setup guides.
+      Drop your code. Our <strong>Qwen2.5-32B</strong> model — trained to think like a Principal Engineer —
+      analyzes your architecture, maps data flows, and writes documentation
+      <strong>better than most devs could</strong> in an afternoon.<br><br>
+      Upload → Generate → Push to GitHub. Done.
     </p>
+
     <div class="hero-cta fade-in">
-      <button class="btn-primary" onclick="showAuth('signup')"><i class="fas fa-rocket"></i> Start Free — 10 Credits</button>
-      <button class="btn-ghost" onclick="document.getElementById('features').scrollIntoView({behavior:'smooth'})">See How It Works</button>
+      <button class="btn-primary" onclick="showAuth('signup')"><i class="fas fa-gift"></i> Get $5 Free Credit</button>
+      <button class="btn-ghost" onclick="document.getElementById('why').scrollIntoView({behavior:'smooth'})"><i class="fas fa-play"></i> See Why It's Better</button>
     </div>
 
-    <div class="hero-stats fade-in">
-      <div class="stat"><span class="stat-num">10</span><span class="stat-label">Free Credits</span></div>
-      <div class="stat"><span class="stat-num">$0.50</span><span class="stat-label">Per README</span></div>
-      <div class="stat"><span class="stat-num">&lt;30s</span><span class="stat-label">Generation Time</span></div>
-      <div class="stat"><span class="stat-num">32B</span><span class="stat-label">Model Params</span></div>
+    <div class="pain-bar fade-in">
+      <div class="pain-item">
+        <p class="pain-before">Before</p>
+        <p class="pain-val">2h+</p>
+        <p class="pain-label">Writing docs manually</p>
+      </div>
+      <div class="pain-item">
+        <p class="pain-after">After</p>
+        <p class="pain-val">12s</p>
+        <p class="pain-label">Auto-generated README</p>
+      </div>
+      <div class="pain-item">
+        <p class="pain-after">Cost</p>
+        <p class="pain-val">$0.50</p>
+        <p class="pain-label">Per professional README</p>
+      </div>
+      <div class="pain-item">
+        <p class="pain-after">Free</p>
+        <p class="pain-val">$5.00</p>
+        <p class="pain-label">On signup (10 READMEs)</p>
+      </div>
     </div>
   </section>
 
@@ -528,7 +638,7 @@
         <div class="demo-dot" style="background:#ff5f57"></div>
         <div class="demo-dot" style="background:#febc2e"></div>
         <div class="demo-dot" style="background:#28c840"></div>
-        <span style="font-family:var(--mono);font-size:0.7rem;color:var(--muted);margin-left:8px">your_project.js</span>
+        <span style="font-family:var(--mono);font-size:0.7rem;color:var(--muted);margin-left:8px">payment_service.js — drop ANY file</span>
       </div>
       <div class="demo-body">
         <span class="kw">async function</span> <span class="fn">processPayment</span>(<span style="color:#c9d1d9">userId, amount</span>) {<br>
@@ -537,39 +647,94 @@
         &nbsp;&nbsp;<span class="kw">const</span> receipt = <span class="kw">await</span> <span class="fn">stripe.charge</span>({ amount, currency: <span class="str">'usd'</span> });<br>
         &nbsp;&nbsp;<span class="kw">return</span> { success: <span class="kw">true</span>, receipt };<br>
         }<span class="cursor"></span><br>
-        <span class="cm">// Drop your entire codebase — we handle the rest</span>
+        <span class="cm">// Your entire codebase → one README in 12 seconds</span>
       </div>
     </div>
 
-    <div class="arrow-down"><i class="fas fa-chevron-down"></i> <span style="font-family:var(--mono);font-size:0.75rem;color:var(--muted)"> AI MAGIC </span> <i class="fas fa-chevron-down"></i></div>
+    <div class="arrow-down"><i class="fas fa-chevron-down"></i>&nbsp;<span style="font-family:var(--mono);font-size:0.75rem;color:var(--muted)">QWEN2.5-32B ANALYSIS</span>&nbsp;<i class="fas fa-chevron-down"></i></div>
 
     <div class="readme-preview">
-      <h3># processPayment Module</h3>
+      <h3>🧠 Payment Service — README.md</h3>
       <div class="readme-line cyan"></div>
       <div class="readme-line w-full"></div>
       <div class="readme-line w-80"></div>
       <div class="readme-line w-full"></div>
       <div class="readme-line w-60"></div>
-      <div class="readme-line cyan" style="width:20%;animation-delay:0.3s"></div>
+      <div class="readme-line cyan" style="width:22%;animation-delay:0.3s"></div>
       <div class="readme-line w-full" style="animation-delay:0.1s"></div>
       <div class="readme-line w-40" style="animation-delay:0.2s"></div>
     </div>
   </div>
 
+  <!-- WHY BETTER -->
+  <section id="why" class="why-section">
+    <div class="section-header">
+      <span class="tag">The Difference</span>
+      <h2 class="section-title">Why Not Just Use GPT-4?</h2>
+      <p class="section-sub">We ran the comparison. Here's what we found.</p>
+    </div>
+    <div class="compare-grid">
+      <div class="compare-card">
+        <span class="compare-label bad">❌ Generic LLMs</span>
+        <h3 class="compare-title">ChatGPT / Generic Models</h3>
+        <ul class="compare-points">
+          <li><span class="ico" style="color:var(--red)">✗</span> Surface-level summaries — just restates code</li>
+          <li><span class="ico" style="color:var(--red)">✗</span> No real architecture insight</li>
+          <li><span class="ico" style="color:var(--red)">✗</span> Misses design patterns and data flows</li>
+          <li><span class="ico" style="color:var(--red)">✗</span> Generic boilerplate everyone has seen</li>
+          <li><span class="ico" style="color:var(--red)">✗</span> Requires heavy prompt engineering</li>
+        </ul>
+      </div>
+      <div class="compare-card winner">
+        <span class="compare-label good">✅ DS Auto-Doc (Qwen2.5-32B)</span>
+        <h3 class="compare-title">Engineered for Code</h3>
+        <ul class="compare-points">
+          <li><span class="ico" style="color:var(--green)">✓</span> Deep architectural analysis — like a code review</li>
+          <li><span class="ico" style="color:var(--green)">✓</span> Maps module relationships and data flows</li>
+          <li><span class="ico" style="color:var(--green)">✓</span> Identifies design patterns by name</li>
+          <li><span class="ico" style="color:var(--green)">✓</span> Produces Senior Engineer-quality prose</li>
+          <li><span class="ico" style="color:var(--green)">✓</span> Zero prompt engineering — upload and go</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
   <!-- FEATURES -->
   <section id="features" class="features-section">
     <div class="section-header">
       <span class="tag">Features</span>
-      <h2 class="section-title">Everything Your Docs Need</h2>
-      <p class="section-sub">From bare code to production-ready documentation in one click</p>
+      <h2 class="section-title">Everything Included</h2>
+      <p class="section-sub">From raw code to push-ready docs in one click</p>
     </div>
     <div class="features-grid">
-      <div class="feature-card"><span class="feature-icon">🧠</span><h3 class="feature-title">Deep Code Analysis</h3><p class="feature-desc">Qwen-32B reads your entire codebase, understanding architecture, patterns, and intent — not just surface-level comments.</p></div>
-      <div class="feature-card"><span class="feature-icon">⚡</span><h3 class="feature-title">Instant Generation</h3><p class="feature-desc">Professional README with Tech Stack tables, Quick Start, Installation, API Reference — all in under 30 seconds.</p></div>
-      <div class="feature-card"><span class="feature-icon">🔗</span><h3 class="feature-title">Web3 Payments</h3><p class="feature-desc">Pay with USDT on Polygon or BSC directly from MetaMask. No credit cards, no KYC. Pure crypto.</p></div>
-      <div class="feature-card"><span class="feature-icon">📐</span><h3 class="feature-title">Architecture Diagrams</h3><p class="feature-desc">Auto-generates component relationships, data flows, and module dependencies in clean Markdown format.</p></div>
-      <div class="feature-card"><span class="feature-icon">🎨</span><h3 class="feature-title">Custom Tone</h3><p class="feature-desc">Tell it to be technical, funny, beginner-friendly, or enterprise-grade. Your docs, your voice.</p></div>
-      <div class="feature-card"><span class="feature-icon">💾</span><h3 class="feature-title">One-Click Download</h3><p class="feature-desc">Instantly download your README.md file, ready to push to GitHub. No login wall, no hidden limits.</p></div>
+      <div class="feature-card"><span class="feature-icon">🧠</span><h3 class="feature-title">Architecture-Aware AI</h3><p class="feature-desc">Qwen2.5-32B doesn't just read your code — it understands it. Identifies patterns, dependencies, and explains the "why" behind your design decisions.</p></div>
+      <div class="feature-card"><span class="feature-icon">⚡</span><h3 class="feature-title">12-Second Generation</h3><p class="feature-desc">Full professional README with Tech Stack tables, Quick Start, API Reference, and Contributing guide — generated faster than you can make coffee.</p></div>
+      <div class="feature-card"><span class="feature-icon">🔗</span><h3 class="feature-title">Crypto Payments</h3><p class="feature-desc">Pay with USDT on Polygon or BSC via MetaMask. No credit cards, no banks, no KYC. Just connect your wallet and top up instantly.</p></div>
+      <div class="feature-card"><span class="feature-icon">🏗</span><h3 class="feature-title">Real Architecture Docs</h3><p class="feature-desc">Generates component relationships, data flows, and module dependency explanations a Principal Engineer would be proud to sign off on.</p></div>
+      <div class="feature-card"><span class="feature-icon">🎨</span><h3 class="feature-title">Custom Instructions</h3><p class="feature-desc">Tell it your tone — technical, startup-friendly, enterprise-grade, or even funny. Your documentation voice, your brand.</p></div>
+      <div class="feature-card"><span class="feature-icon">🤝</span><h3 class="feature-title">Referral Rewards</h3><p class="feature-desc">Share your unique link. When a friend signs up, you both get $5.00 in credits. Stack referrals to generate docs for free forever.</p></div>
+    </div>
+  </section>
+
+  <!-- AFFILIATE SECTION -->
+  <section class="affiliate-section">
+    <div class="section-header">
+      <span class="tag" style="border-color:rgba(0,255,136,0.3);color:var(--green);background:rgba(0,255,136,0.06)">Referral Program</span>
+      <h2 class="section-title">Refer a Friend.<br>Both Get <span style="color:var(--green)">$5</span>.</h2>
+      <p class="section-sub">Share your unique affiliate link. Every friend who signs up<br>adds $5.00 to your balance — automatically, instantly.</p>
+    </div>
+    <div class="affiliate-card">
+      <div class="affiliate-amount">$5</div>
+      <p style="font-family:var(--mono);font-size:0.7rem;color:rgba(0,255,136,0.6);letter-spacing:0.1em;text-transform:uppercase;margin:8px 0 24px">Per successful referral · No limit</p>
+      <ul class="pricing-features" style="text-align:left;margin-bottom:32px">
+        <li><span class="check">✓</span> Share your unique link anywhere — Twitter, GitHub, Discord</li>
+        <li><span class="check">✓</span> Friend gets $5.00 free credit on signup</li>
+        <li><span class="check">✓</span> You get $5.00 added instantly on their registration</li>
+        <li><span class="check">✓</span> No limit on referrals — stack credits indefinitely</li>
+      </ul>
+      <button class="btn-primary" onclick="showAuth('signup')" style="width:100%;justify-content:center;background:var(--green);color:#000">
+        <i class="fas fa-link"></i> Sign Up & Get Your Link
+      </button>
     </div>
   </section>
 
@@ -577,35 +742,38 @@
   <section class="pricing-section">
     <div class="section-header">
       <span class="tag">Pricing</span>
-      <h2 class="section-title">Simple Credits</h2>
-      <p class="section-sub">No subscriptions. No surprises. Pay only for what you generate.</p>
+      <h2 class="section-title">Pay As You Go</h2>
+      <p class="section-sub">No subscriptions. No seat fees. Pay only for what you generate.</p>
     </div>
     <div class="pricing-card">
-      <span class="tag">USDT — Polygon or BSC</span>
-      <div class="pricing-price">$5</div>
-      <p class="pricing-sub">= 10 Credits → 10 Professional READMEs</p>
+      <span class="tag">Pay via MetaMask · Polygon or BSC</span>
+      <div class="pricing-price">$5 USDT</div>
+      <p class="pricing-sub">= $10.00 in credits → 20 Professional READMEs</p>
       <ul class="pricing-features">
-        <li><span class="check">✓</span> 10 README generations ($0.50 each)</li>
-        <li><span class="check">✓</span> Qwen-32B AI model (state-of-the-art)</li>
-        <li><span class="check">✓</span> Pay via MetaMask — Polygon or BSC</li>
-        <li><span class="check">✓</span> Instant credit top-up on chain confirmation</li>
-        <li><span class="check">✓</span> <strong style="color:var(--green)">10 FREE credits on signup</strong></li>
+        <li><span class="check">✓</span> $10.00 credit added to your account instantly</li>
+        <li><span class="check">✓</span> $0.50 per README generation</li>
+        <li><span class="check">✓</span> Powered by Qwen2.5-32B (beats GPT-4 on code tasks)</li>
+        <li><span class="check">✓</span> Polygon or BSC — gas under $0.01</li>
+        <li><span class="check">✓</span> Credits never expire</li>
+        <li><span class="check">✓</span> <strong style="color:var(--green)">$5.00 free on signup — no payment needed to start</strong></li>
       </ul>
       <button class="btn-primary" onclick="showAuth('signup')" style="width:100%;justify-content:center;">
-        <i class="fas fa-gift"></i> Claim 10 Free Credits
+        <i class="fas fa-rocket"></i> Start With $5 Free
       </button>
     </div>
   </section>
 
   <footer class="landing-footer">
-    <p>DS // AUTO-DOC ENGINE &copy; 2025 — Powered by Groq & Qwen-32B</p>
+    <p>DS // AUTO-DOC ENGINE &copy; 2025 — Powered by Groq × Qwen2.5-32B</p>
+    <p style="margin-top:8px">Stop documenting. Start shipping.</p>
   </footer>
 </div>
 
 <!-- ===================== AUTH ===================== -->
 <div id="auth-screen" class="screen-hidden">
   <div class="auth-card glass" style="margin:auto">
-    <div class="auth-logo">DS // <span>ACCESS</span></div>
+    <div class="auth-logo">DS // <span>AUTO-DOC</span></div>
+    <p class="auth-tagline">Stop writing docs manually.<br>Get a Senior-level README in 12 seconds.</p>
 
     <!-- SIGN IN -->
     <div id="signin-form">
@@ -623,9 +791,16 @@
       <div class="form-group"><input type="email" id="signup-email" class="form-input" placeholder="Email address" /></div>
       <div class="form-group"><input type="password" id="signup-password" class="form-input" placeholder="Password (min. 6 chars)" /></div>
       <button class="btn-primary" style="width:100%;justify-content:center;margin-top:8px" onclick="handleSignUp()">
-        <i class="fas fa-rocket"></i> Create Account
+        <i class="fas fa-rocket"></i> Create Account & Get $5 Free
       </button>
-      <div class="auth-notice"><i class="fas fa-gift"></i><span>You'll receive <strong>10 free credits</strong> instantly on signup — no payment needed to start.</span></div>
+      <div class="auth-notice">
+        <i class="fas fa-gift"></i>
+        <span>You'll receive <strong>$5.00 free credit</strong> (10 READMEs) the moment your account is created — no payment required.</span>
+      </div>
+      <div class="ref-notice" id="ref-notice">
+        <i class="fas fa-link"></i>
+        <span>You were referred by a friend. You'll both get a <strong>$5 bonus</strong> on signup!</span>
+      </div>
       <div class="auth-divider"><span>or</span></div>
       <div class="auth-switch">Already have an account? <button onclick="toggleAuthMode('signin')">Log in →</button></div>
     </div>
@@ -642,7 +817,6 @@
 <div id="dashboard-screen" class="screen-hidden">
   <header class="dash-header">
     <span class="dash-logo">DS // <span style="color:var(--txt)">AUTO-DOC</span></span>
-
     <div class="dash-controls">
       <div id="wallet-badge" class="wallet-badge" style="display:none">Wallet: --</div>
       <div class="topup-wrap">
@@ -660,10 +834,26 @@
   </header>
 
   <div class="dash-main">
+
+    <!-- Affiliate Panel -->
+    <div class="affiliate-panel">
+      <p class="affiliate-panel-title">
+        <i class="fas fa-link"></i> Your Affiliate Link — Earn $5 per referral
+      </p>
+      <div class="affiliate-input-row">
+        <input type="text" id="affiliate-link-display" class="affiliate-link-input" readonly placeholder="Loading your link..." />
+        <button class="btn-copy-link" onclick="copyAffiliateLink()"><i class="fas fa-copy"></i> Copy</button>
+      </div>
+    </div>
+
     <div id="chat-messages">
-      <div class="empty-state" id="empty-state">
+      <div class="empty-state">
         <div class="empty-icon"><i class="fas fa-file-code"></i></div>
-        <p class="empty-title">Upload your source code and hit Generate<br>Cost: <span class="empty-cost">$0.50</span> per professional README</p>
+        <p class="empty-title">
+          Upload your source code and hit Generate<br>
+          Cost: <span class="empty-cost">$0.50</span> per professional README<br>
+          <span style="color:var(--green);font-size:0.75rem">← Share your affiliate link above to earn free credits</span>
+        </p>
       </div>
     </div>
 
@@ -681,7 +871,7 @@
         <textarea
           id="message-input"
           class="msg-input"
-          placeholder="Optional: Any specific instructions? (e.g. make it very technical, add humor)"
+          placeholder="Optional: Special instructions? (e.g. 'make it enterprise-grade', 'add humor')"
           rows="1"
         ></textarea>
         <button class="btn-send" id="send-btn" title="Generate README">
@@ -697,15 +887,20 @@
 <script src="main.js"></script>
 
 <script>
-  // Intersection Observer for feature cards
+  // Feature cards intersection observer
   const observer = new IntersectionObserver((entries) => {
     entries.forEach((e, i) => {
-      if (e.isIntersecting) {
-        setTimeout(() => e.target.classList.add('visible'), i * 100);
-      }
+      if (e.isIntersecting) setTimeout(() => e.target.classList.add('visible'), i * 100);
     });
   }, { threshold: 0.1 });
   document.querySelectorAll('.feature-card').forEach(c => observer.observe(c));
+
+  // Show referral notice in signup form if ref param is in session
+  (function() {
+    var ref = sessionStorage.getItem('ds_ref');
+    var notice = document.getElementById('ref-notice');
+    if (ref && notice) notice.classList.add('visible');
+  })();
 </script>
 
 </body>
